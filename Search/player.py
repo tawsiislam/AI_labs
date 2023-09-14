@@ -35,7 +35,8 @@ class PlayerControllerMinimax(PlayerController):
         
         # initializing variables for time/depth limit for minimax
         self.timeLimit = 0.075 # time limit for each move in seconds, 75 ms
-        self.max_depth = 3
+        # self.max_depth = 3
+        self.max_depth = 5
         
         super(PlayerControllerMinimax, self).__init__()
         
@@ -117,12 +118,29 @@ class PlayerControllerMinimax(PlayerController):
         visitedNodes = dict()
 
 
+        # get children of the initial tree node
+        children = initial_tree_node.compute_and_get_children()
         
+        # loop through children, call on minimax, save their heuristic values
+        heuristicValuesChildren = []
+        for child in children:
+            heuristicValuesChildren.append(  self.MiniMax(child, depth+1, startTime, -np.inf, np.inf, 0)  )
         
+        print(" ")
+        print("children heur were: ", heuristicValuesChildren)
+        # highest heuristic value is child with best move
+        bestMoveInt = np.argmax(heuristicValuesChildren) # index of best move
+        bestMove = ACTION_TO_STR[bestMoveInt] # string of best move
+        
+        print("  ")
+        print("player best move: ", bestMove)
+        print("  ")
+
+        return bestMove
         
 
-        random_move = random.randrange(5)
-        return ACTION_TO_STR[random_move]
+        # random_move = random.randrange(5)
+        # return ACTION_TO_STR[random_move]
 
 
 
@@ -132,7 +150,7 @@ class PlayerControllerMinimax(PlayerController):
         """depth first search algorithm, using alpha beta pruning"""
 
         # check if the state is terminal
-        if CheckIfTerminalState(rootNode.state, depth, maxDepth, time.time() - initialTime, maxTime):
+        if self.CheckIfTerminalState(rootNode.state, depth, time.time() - initialTime):
             return rootNode
         
 
@@ -164,15 +182,28 @@ class PlayerControllerMinimax(PlayerController):
         return Node()
         
 
-    def AlphaBetaPruning(self, rootNode:Node, depth:int, maxDepth:int, initialTime:int, maxTime:int, alpha:int, beta:int) -> int:
-        """alpha beta pruning algorithm for minimax; 
-            returns the heuristic value of the node
+    def MiniMax(self, rootNode:Node, depth:int, initialTime:int, alpha:int, beta:int, player:int) -> int:
         """
-
-        # check if the state is terminal, raise exception
-        if CheckIfTerminalState(rootNode.state, depth, maxDepth, time.time() - initialTime, maxTime):
-            return RuntimeError("Error: reached time limit")
+        alpha beta pruning algorithm for minimax
+        :param rootNode: root node of the tree
+        :param depth: current depth of the tree
+        :param initialTime: time when the search started
+        :param alpha: alpha value in minimax algorithm
+        :param beta: beta value in minimax algorithm
+        :param player: player that is currently playing, 0= max, 1 = min
+        :return: heuristic value of the node
+        """
         
+        print("depth: ", depth, "player: ", player)
+        # check if the state is terminal, raise exception
+        if self.CheckIfTerminalState(rootNode.state, depth, time.time() - initialTime):
+            #return RuntimeError("Error: reached time limit")
+            print("\t was terminal state, heur to return: ", self.HeuristicFunction(rootNode.state))
+            return self.HeuristicFunction(rootNode.state) # evaluating heuristic for terminal state
+        print("not terminal state")
+        
+        # todo: introduce hashed states later
+        """
         # check if state is in the hash table
         hashedState = self.HashState(rootNode.state)
 
@@ -180,12 +211,26 @@ class PlayerControllerMinimax(PlayerController):
             return self.statesHashTable[hashedState]
         
         else:
+        """
+        rootNode.compute_and_get_children()
+        print("node has number of children: ", len(rootNode.children), " children")
 
+        if player == 0: # max player
+            bestPossibleValue = -np.inf
+            for child in rootNode.children:
+                v = self.MiniMax(child, depth+1, initialTime, alpha, beta, 1)
+                bestPossibleValue = np.max([bestPossibleValue, v])
+            return bestPossibleValue
+        
+        else: # min player
+            bestPossibleValue = np.inf
+            for child in rootNode.children:
+                v = self.MiniMax(child, depth+1, initialTime, alpha, beta, 0)
+                bestPossibleValue = np.min([bestPossibleValue, v])
+            return bestPossibleValue
 
+            
 
-        # if depth == maxDepth or 
-
-        return 0
     
     def HashState(self,state:State, depth:int) -> list:
         """hashes the state to a list of integers"""
@@ -204,12 +249,12 @@ class PlayerControllerMinimax(PlayerController):
                 rowSum = 0
             else:
                 if fish[1] == yCoord:
-                    rowSum += fish[0]*state.fishes_scores[fish]
+                    rowSum += fish[0]*state.fish_scores[fish]
                 else:
                     hashedState.append(rowSum)
                     yCoord = fish[1]
                     rowSum = 0
-                    rowSum += fish[0]*state.fishes_scores[fish] 
+                    rowSum += fish[0]*state.fish_scores[fish] 
 
 
             # fish is a tuple with x and y coordinates
@@ -239,60 +284,66 @@ class PlayerControllerMinimax(PlayerController):
         # check if player 0 caught a fish, if so add the value of the fish to the score, even if it is a negative value
         # negative value => bad for player 0, good for player 1 => penalty for current state
         if p0Caught != None:
-            fishCaught0 = state.fishes_scores[p0Caught]
+            fishCaught0 = state.fish_scores[p0Caught] *100
             closestFishScore = 0
+            print("fish caught: ", p0Caught)
         else:
             fishCaught0 = 0
 
             #----- find closest fish -------
             # all fish positions
             fishPos = state.fish_positions.values() # list of tuples
+            fishPosKeys = state.fish_positions.keys() 
 
             # for each fish, calculate the distance to the player, and save the minimum distance
             minDist = np.inf
-            for fish in fishPos:
+            for fishNumber,fish in enumerate(fishPos):
+                
                 dist = self.ManhattanDistance(state.get_hook_positions()[0], fish)
                 
                 # check that dist is less than minDist, and that fish does not have negative score
-                currFishScore = state.fishes_scores[fish]
+                currFishScore = state.fish_scores[fishNumber]
                 if dist < minDist and currFishScore > 0:
                     minDist = dist
                     
                     # closestFish = fish
-                    closestFishScore = currFishScore /10 # todo: double check this, thought: don't want being close to a fish to be too important, want to prioritize actually catching fish
+                    closestFishScore = currFishScore /3 # todo: double check this, thought: don't want being close to a fish to be too important, want to prioritize actually catching fish
         
         totalScore = playerScore[0] - playerScore[1] + fishCaught0 + closestFishScore
+        print("score: totalScore: ", totalScore, " playerScore0: ", playerScore[0], "playerScore1", playerScore[1] ," fishCaught0: ", fishCaught0, " closestFishScore: ", closestFishScore)
         return totalScore
             
                 
 
-                
-                
+     
 
-            
+    # distance calculator, euclidian, takes 2 tuples and returns distance between them
+    def ManhattanDistance(self, coord1: Tuple, coord2:Tuple)->float:
+        """takes in two coordinates in form of tuples and returns the manhattan distance between them
+            is |dx|+|dy|
+        """
+
+        # return np.sqrt( (coord2(1) -coord1(1))**2 + (coord2(2) -coord1(2))**2  )
+
+        # when being on the edge of the map one can make a step that gets you to the other side of the map
+        dx = np.min([np.abs(coord1[0] - coord2[0]), 20 - np.abs(coord1[0] - coord2[0])])
         
+        # for y it is normal distance calculation
+        dy = np.abs(coord1[1] - coord2[1])
 
+        return dx + dy
 
+      
+    def CheckIfTerminalState(self, state, depth, time) -> bool:
+        """checks if the state is terminal or not, returns true if terminal, false if not"""
 
-
-
-
-# distance calculator, euclidian, takes 2 tuples and returns distance between them
-def ManhattanDistance(self, coord1: Tuple, coord2:Tuple)->float:
-    """takes in two coordinates in form of tuples and returns the manhattan distance between them
-        is |dx|+|dy|
-    """
-
-    # return np.sqrt( (coord2(1) -coord1(1))**2 + (coord2(2) -coord1(2))**2  )
-
-    # when being on the edge of the map one can make a step that gets you to the other side of the map
-    dx = np.min([np.abs(coord1[0] - coord2[0]), 20 - np.abs(coord1[0] - coord2[0])])
-    
-    # for y it is normal distance calculation
-    dy = np.abs(coord1[1] - coord2[1])
-
-    return dx + dy
-
+        print("[CheckIfTerminalState]: depth: ", depth, " time: ", time)
+        if depth == self.max_depth or time == self.timeLimit: # or state.game_over == True
+            print("[CheckIfTerminalState]: depth: ", depth, " time: ", time, "    True")
+            return True
+        else:
+            print("[CheckIfTerminalState]: depth: ", depth, " time: ", time, "    False")
+            return False
 
 class ParentNode:
     def __init__(self, currPoint:tuple, parent, heurVal:int = 0 ) -> None:
@@ -304,14 +355,7 @@ class ParentNode:
     def SetHeuristicValue(self, heusVal:int) ->None:
         self.heuristicValue = heusVal
         
-        
-def CheckIfTerminalState(state, depth, maxDepth, time, maxTime) -> bool:
-    """checks if the state is terminal or not, returns true if terminal, false if not"""
-    if depth == maxDepth or time == maxTime: # or state.game_over == True
-        return True
-    else:
-        return False
-
+  
 
 # evaluation function
 #- heuristic function
