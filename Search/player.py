@@ -321,14 +321,25 @@ class PlayerControllerMinimax(PlayerController):
 
             #----- find closest fish -------
             # all fish positions
-            fishPos = state.fish_positions.values() # list of tuples
+            # fishPos = state.fish_positions.values() # list of tuples
+            # fishPos = state.get_fish_positions().items() # list of tuples
+            fishPos = state.get_fish_positions().values() # list of tuples
             fishPosKeys = state.fish_positions.keys() 
+
+            if len(fishPos) <=1:
+                        print("[fishFlunk1] only fish is in pos", fishPos)
 
             # for each fish, calculate the distance to the player, and save the minimum distance
             minDist = np.inf
-            
+            #-------------
             for fishNumber,fish in enumerate(fishPos):
+                if len(fishPos) <=1:
+                    print("[fishFlunk2] only fish is in pos", fishPos)
                 if fishNumber in state.fish_scores: # don't want to calculate distance to enemyCaught fish
+                    
+                    if len(fishPos) <=1:
+                        print("[fishFlunk3] only fish is in pos", fishPos)
+
                     # calculate distance to fish
                     dist = self.ManhattanDistance(state.get_hook_positions()[playerNumber], fish)
                     
@@ -336,14 +347,16 @@ class PlayerControllerMinimax(PlayerController):
                     currFishScore = state.fish_scores[fishNumber]
 
                     totFishScore += currFishScore / ( (dist+0.01) **2 )
-                    if dist < minDist and currFishScore > 0:
+                    if dist < minDist :# and currFishScore > 0
                         minDist = dist
                         
                         # closestFish = fish
-                        closestFishScore = currFishScore /dist # todo: double check this, thought: don't want being close to a fish to be too important, want to prioritize actually catching fish
+                        closestFishScore = currFishScore /3 # todo: double check this, thought: don't want being close to a fish to be too important, want to prioritize actually catching fish
         
+
+        #-------------
         # totalScore = myScore - enemyScore  + friendlyFishCaught + closestFishScore
-        totalScore = totFishScore
+        totalScore = totFishScore + closestFishScore
         print("score: totalScore: ", totalScore, " myScore: ", myScore, "enemyScore", enemyScore ," friendlyFishCaught: ", friendlyFishCaught, " closestFishScore: ", closestFishScore)
         return totalScore
             
