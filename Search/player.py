@@ -9,6 +9,11 @@ import numpy as np
 import time
 
 
+"""
+improvements:
+- don't need to evaluate stay action every time?
+"""
+
 
 
 class PlayerControllerHuman(PlayerController):
@@ -34,9 +39,10 @@ class PlayerControllerMinimax(PlayerController):
     def __init__(self):
         
         # initializing variables for time/depth limit for minimax
-        self.timeLimit = 0.075 # time limit for each move in seconds, 75 ms
-        # self.max_depth = 3
-        self.max_depth = 5
+        # self.timeLimit = 0.075 # time limit for each move in seconds, 75 ms
+        self.timeLimit = 0.075*0.8
+        # self.max_depth = 3 # 5 is good depth
+        self.max_depth = 7
         
         super(PlayerControllerMinimax, self).__init__()
         
@@ -112,7 +118,7 @@ class PlayerControllerMinimax(PlayerController):
         # start time to keep track of time limit
         startTime = time.time()
         depth = 0
-        bestMoveInt = 0 # 0 is stay, 1 is left, 2 is right, 3 is up, 4 is down
+        # bestMoveInt = 0 # 0 is stay, 1 is left, 2 is right, 3 is up, 4 is down
 
         # dictionary to keep track of visited nodes
         visitedNodes = dict()
@@ -124,13 +130,18 @@ class PlayerControllerMinimax(PlayerController):
         # loop through children, call on minimax, save their heuristic values
         heuristicValuesChildren = []
         for child in children:
+            print(" ")
             heuristicValuesChildren.append(  self.MiniMax(child, depth+1, startTime, -np.inf, np.inf, 0)  )
-        
+            print("child position: ", child.state.get_hook_positions()[0])
+            print(" ")
+            
         print(" ")
         print("children heur were: ", heuristicValuesChildren)
+        print(" ")
+
         # highest heuristic value is child with best move
         bestMoveInt = np.argmax(heuristicValuesChildren) # index of best move
-        bestMove = ACTION_TO_STR[bestMoveInt] # string of best move
+        bestMove = ACTION_TO_STR[children[bestMoveInt].move] # string of best move
         
         print("  ")
         print("player best move: ", bestMove)
@@ -195,12 +206,13 @@ class PlayerControllerMinimax(PlayerController):
         """
         
         print("depth: ", depth, "player: ", player)
+        
         # check if the state is terminal, raise exception
         if self.CheckIfTerminalState(rootNode.state, depth, time.time() - initialTime):
             #return RuntimeError("Error: reached time limit")
-            print("\t was terminal state, heur to return: ", self.HeuristicFunction(rootNode.state))
-            return self.HeuristicFunction(rootNode.state) # evaluating heuristic for terminal state
-        print("not terminal state")
+            print("\t was terminal state, heur to return: ", self.HeuristicFunction(rootNode.state, player))
+            return self.HeuristicFunction(rootNode.state, player) # evaluating heuristic for terminal state
+        # print("not terminal state")
         
         # todo: introduce hashed states later
         """
@@ -212,22 +224,33 @@ class PlayerControllerMinimax(PlayerController):
         
         else:
         """
-        rootNode.compute_and_get_children()
+        
+        # rootNode.compute_and_get_children()
+        currNodeChildren = rootNode.compute_and_get_children()
+        print(" ")
         print("node has number of children: ", len(rootNode.children), " children")
 
         if player == 0: # max player
             bestPossibleValue = -np.inf
-            for child in rootNode.children:
+            for childNo, child in enumerate(rootNode.children):
+            
+                print(" ")
+                print("childNo ", childNo)
+                print(" ")
                 v = self.MiniMax(child, depth+1, initialTime, alpha, beta, 1)
                 bestPossibleValue = np.max([bestPossibleValue, v])
-            return bestPossibleValue
+            # return bestPossibleValue
         
         else: # min player
             bestPossibleValue = np.inf
             for child in rootNode.children:
+                
                 v = self.MiniMax(child, depth+1, initialTime, alpha, beta, 0)
                 bestPossibleValue = np.min([bestPossibleValue, v])
-            return bestPossibleValue
+            # return bestPossibleValue
+        return bestPossibleValue
+        
+        
 
             
 
@@ -272,23 +295,29 @@ class PlayerControllerMinimax(PlayerController):
 
     #     return value
 
-    def HeuristicFunction(self, state: State) -> int:
+    def HeuristicFunction(self, state: State, playerNumber:int) -> int:
         """heuristic function for the minimax algorithm. Heuristic based on the score of the player, and the distance to the closest fish"""
 
         # player scores 
         playerScore = state.player_scores # player0 : playerScore[0], player1 : playerScore[1]
+        myScore = playerScore[playerNumber]
+        enemyScore = playerScore[1-playerNumber]
+
+        print("[heuristicFunc] current hook pos: ", state.get_hook_positions()[playerNumber])
 
         # check if any fish is caught
-        p0Caught, p1Caught = state.get_caught()
-
+        friendlyCaught = state.get_caught()[playerNumber]
+        enemyCaught = state.get_caught()[1-playerNumber] 
+        totFishScore = 0
         # check if player 0 caught a fish, if so add the value of the fish to the score, even if it is a negative value
         # negative value => bad for player 0, good for player 1 => penalty for current state
-        if p0Caught != None:
-            fishCaught0 = state.fish_scores[p0Caught] *100
+        if friendlyCaught != None:
+            friendlyFishCaught = state.fish_scores[friendlyCaught] *100 # todo: 100 remove
             closestFishScore = 0
-            print("fish caught: ", p0Caught)
+            print("fish caught: ", friendlyCaught)
         else:
-            fishCaught0 = 0
+            friendlyFishCaught = 0
+            closestFishScore = 0
 
             #----- find closest fish -------
             # all fish positions
@@ -297,20 +326,25 @@ class PlayerControllerMinimax(PlayerController):
 
             # for each fish, calculate the distance to the player, and save the minimum distance
             minDist = np.inf
+            
             for fishNumber,fish in enumerate(fishPos):
-                
-                dist = self.ManhattanDistance(state.get_hook_positions()[0], fish)
-                
-                # check that dist is less than minDist, and that fish does not have negative score
-                currFishScore = state.fish_scores[fishNumber]
-                if dist < minDist and currFishScore > 0:
-                    minDist = dist
+                if fishNumber in state.fish_scores: # don't want to calculate distance to enemyCaught fish
+                    # calculate distance to fish
+                    dist = self.ManhattanDistance(state.get_hook_positions()[playerNumber], fish)
                     
-                    # closestFish = fish
-                    closestFishScore = currFishScore /3 # todo: double check this, thought: don't want being close to a fish to be too important, want to prioritize actually catching fish
+                    # check that dist is less than minDist, and that fish does not have negative score
+                    currFishScore = state.fish_scores[fishNumber]
+
+                    totFishScore += currFishScore / ( (dist+0.01) **2 )
+                    if dist < minDist and currFishScore > 0:
+                        minDist = dist
+                        
+                        # closestFish = fish
+                        closestFishScore = currFishScore /dist # todo: double check this, thought: don't want being close to a fish to be too important, want to prioritize actually catching fish
         
-        totalScore = playerScore[0] - playerScore[1] + fishCaught0 + closestFishScore
-        print("score: totalScore: ", totalScore, " playerScore0: ", playerScore[0], "playerScore1", playerScore[1] ," fishCaught0: ", fishCaught0, " closestFishScore: ", closestFishScore)
+        # totalScore = myScore - enemyScore  + friendlyFishCaught + closestFishScore
+        totalScore = totFishScore
+        print("score: totalScore: ", totalScore, " myScore: ", myScore, "enemyScore", enemyScore ," friendlyFishCaught: ", friendlyFishCaught, " closestFishScore: ", closestFishScore)
         return totalScore
             
                 
@@ -337,12 +371,12 @@ class PlayerControllerMinimax(PlayerController):
     def CheckIfTerminalState(self, state, depth, time) -> bool:
         """checks if the state is terminal or not, returns true if terminal, false if not"""
 
-        print("[CheckIfTerminalState]: depth: ", depth, " time: ", time)
-        if depth == self.max_depth or time == self.timeLimit: # or state.game_over == True
+        # print("[CheckIfTerminalState]: depth: ", depth, " time: ", time)
+        if depth == self.max_depth or time >= self.timeLimit: # or state.game_over == True
             print("[CheckIfTerminalState]: depth: ", depth, " time: ", time, "    True")
             return True
         else:
-            print("[CheckIfTerminalState]: depth: ", depth, " time: ", time, "    False")
+            # print("[CheckIfTerminalState]: depth: ", depth, " time: ", time, "    False")
             return False
 
 class ParentNode:
