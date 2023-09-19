@@ -212,23 +212,23 @@ class PlayerControllerMinimax(PlayerController):
             #return RuntimeError("Error: reached time limit")
             print("\t was terminal state, heur to return: ", self.HeuristicFunction(rootNode.state, player))
             return self.HeuristicFunction(rootNode.state, player) # evaluating heuristic for terminal state
-        # print("not terminal state")
-        
-        # todo: introduce hashed states later
-        """
-        # check if state is in the hash table
-        hashedState = self.HashState(rootNode.state)
+            # print("not terminal state")
+            
+            # todo: introduce hashed states later
+            """
+            # check if state is in the hash table
+            hashedState = self.HashState(rootNode.state)
 
-        if hashedState in self.statesHashTable:
-            return self.statesHashTable[hashedState]
-        
-        else:
-        """
-        
-        # rootNode.compute_and_get_children()
-        currNodeChildren = rootNode.compute_and_get_children()
-        print(" ")
-        print("node has number of children: ", len(rootNode.children), " children")
+            if hashedState in self.statesHashTable:
+                return self.statesHashTable[hashedState]
+            
+            else:
+            """
+            
+            # rootNode.compute_and_get_children()
+            # currNodeChildren = rootNode.compute_and_get_children()
+            # print(" ")
+            # print("node has number of children: ", len(rootNode.children), " children")
 
         elif player == 0: # max player
             bestPossibleValue = -np.inf
