@@ -4,7 +4,6 @@ import random
 from fishing_game_core.game_tree import Node, State
 from fishing_game_core.player_utils import PlayerController
 from fishing_game_core.shared import ACTION_TO_STR
-from typing import List, Tuple # for type hinting
 import numpy as np
 import time
 
@@ -146,13 +145,24 @@ class PlayerControllerMinimax(PlayerController):
 
     def alphabeta(self, parentNode:Node, depth:int, visitedStates:dict, initialTime:int, alpha:int, beta:int, player:int) -> int:
         timeExceeded = False
-        stateKey = self.hashkey(parentNode)
         
+        # check if depth limit reached or if time is exceeded        
+        if depth == 0 or time.time()-initialTime >= self.timeLimit:
+            bestPossibleValue = self.HeuristicFunc(parentNode, player)
+            # if time.time()-initialTime >= self.timeLimit: timeExceeded  = True
+            return bestPossibleValue, timeExceeded
+        
+        # ----otherwire continue search----
+        stateKey = self.hashkey(parentNode)
+        # check if state has been visited before
+        # if stateKey in visitedStates:
+        #     return visitedStates[stateKey], timeExceeded
+
+        # unvisited state: check if max or min player
         nodeChildren = parentNode.compute_and_get_children()
 
 
         # for each child, calculate an initial heuristic value, and sort the children based on this: move ordering
-
         heuristicValuesChildren = []
         for childNo,child in enumerate(nodeChildren):
             heuristicValueChild = self.HeuristicFunc(child, player)
@@ -161,23 +171,7 @@ class PlayerControllerMinimax(PlayerController):
         # performing the sorting
         sortedIndices = np.argsort(heuristicValuesChildren) #Move ordering
         nodeChildren = np.array(nodeChildren)[sortedIndices]
-
-
-        # check if depth limit reached or if time is exceeded        
-        if depth == 0 or time.time()-initialTime >= self.timeLimit:
-            bestPossibleValue = self.HeuristicFunc(parentNode, player)
-            # if time.time()-initialTime >= self.timeLimit: timeExceeded  = True
-            return bestPossibleValue, timeExceeded
-        
-        # ----otherwire continue search----
-
-        # check if state has been visited before
-        if stateKey in visitedStates:
-            return visitedStates[stateKey], timeExceeded
-
-        # unvisited state: check if max or min player
-
-        elif player == 0:   #max player
+        if player == 0:   #max player
             bestPossibleValue = -np.inf
             for child in nodeChildren:
                 childBestValue, timeExceeded = self.alphabeta(child, depth-1, visitedStates, initialTime, alpha, beta, 1)
@@ -217,12 +211,6 @@ class PlayerControllerMinimax(PlayerController):
         :rtype: str
         """
 
-        # EDIT THIS METHOD TO RETURN BEST NEXT POSSIBLE MODE USING MINIMAX ###
-
-        # NOTE: Don't forget to initialize the children of the current node
-        #       with its compute_and_get_children() method!
-
-
         # start time to keep track of time limit
         startTime = time.time()
         depth = 0
@@ -233,8 +221,6 @@ class PlayerControllerMinimax(PlayerController):
         visitedStates = dict()
         # change
         
-
-
         # get children of the initial tree node
         children = initial_tree_node.compute_and_get_children()
         # for depth in range (1,4):   #IDDFS
