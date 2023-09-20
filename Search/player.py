@@ -45,6 +45,7 @@ class PlayerControllerMinimax(PlayerController):
         self.max_depth = 7
         
         self.maxAchievedDepth = 0
+
         super(PlayerControllerMinimax, self).__init__()
         
 
@@ -53,7 +54,8 @@ class PlayerControllerMinimax(PlayerController):
         Main loop for the minimax next move search.
         :return:
         """
-        start_time = time.time()
+        # start_time = time.time()
+        
 
         # Generate first message (Do not remove this line!)
         first_msg = self.receiver()
@@ -127,10 +129,20 @@ class PlayerControllerMinimax(PlayerController):
 
 
 
-    def alphabeta(self, parentNode:Node, depth:int, visitedStates:dict, initialTime:int, alpha:int, beta:int, player:int) -> int:
+    def alphabeta(self, parentNode:Node, depth:int, visitedStates:dict, initialTime:int, alpha:int, beta:int, player:int) -> Tuple[int, bool]:
         timeExceeded = False
         stateKey = self.hashkey(parentNode)
         
+
+        # check if depth limit reached or if time is exceeded        
+        if depth == 0 or time.time()-initialTime >= self.timeLimit:
+            bestPossibleValue = self.HeuristicFunc(parentNode, player)
+
+            if time.time()-initialTime >= self.timeLimit: timeExceeded  = True
+            
+            return bestPossibleValue, timeExceeded
+
+
         nodeChildren = parentNode.compute_and_get_children()
 
 
@@ -146,11 +158,6 @@ class PlayerControllerMinimax(PlayerController):
         nodeChildren = np.array(nodeChildren)[sortedIndices]
 
 
-        # check if depth limit reached or if time is exceeded        
-        if depth == 0 or time.time()-initialTime >= self.timeLimit:
-            bestPossibleValue = self.HeuristicFunc(parentNode, player)
-            # if time.time()-initialTime >= self.timeLimit: timeExceeded  = True
-            return bestPossibleValue, timeExceeded
         
         # ----otherwire continue search----
 
@@ -208,8 +215,9 @@ class PlayerControllerMinimax(PlayerController):
 
         # start time to keep track of time limit
         startTime = time.time()
-        depth = 0
+        # depth = 0
         bestOverallHeur = -np.inf
+        
         # bestMoveInt = 0 # 0 is stay, 1 is left, 2 is right, 3 is up, 4 is down
 
         # dictionary to keep track of visited nodes
