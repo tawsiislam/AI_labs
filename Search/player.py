@@ -67,12 +67,12 @@ class PlayerControllerMinimax(PlayerController):
             maxDist = self.ManhattanDistance(max_hook,fish_pos)
             minDist = self.ManhattanDistance(min_hook,fish_pos)
 
-            if maxDist == 0:
-                maxHeur = fish_scores[fish_num] * 2
+            if maxDist == 0 and fish_scores[fish_num]>0:
+                maxHeur += fish_scores[fish_num] * 2
             else: 
                 maxHeur += (fish_scores[fish_num]) / (maxDist+1) 
-            if minDist == 0:
-                minHeur = fish_scores[fish_num]
+            if minDist == 0 and fish_scores[fish_num]>0:
+                minHeur += fish_scores[fish_num]
             else:
                 minHeur += (fish_scores[fish_num]) / (minDist+1) 
         return (maxHeur-minHeur) + gameScore*10    #TODO improve heuristic
@@ -83,12 +83,12 @@ class PlayerControllerMinimax(PlayerController):
         """
 
         # when being on the edge of the map one can make a step that gets you to the other side of the map
-        dx = np.min([np.abs(hookCoord[0] - fishCoord[0]), 20 - np.abs(hookCoord[0] - fishCoord[0])])
-        
+        dx = np.abs(hookCoord[0] - fishCoord[0])
+        mindx = np.min([dx,20-dx])
         # for y it is normal distance calculation
         dy = np.abs(hookCoord[1] - fishCoord[1])
 
-        return dx + dy
+        return mindx + dy
     
     def hashkey(self, parentNode):
         hookPos = parentNode.state.get_hook_positions()
@@ -100,7 +100,7 @@ class PlayerControllerMinimax(PlayerController):
 
     def alphabeta(self, parentNode:Node, depth:int, visitedStates:dict, initialTime:int, alpha:int, beta:int, player:int) -> int:
         nodeChildren = parentNode.compute_and_get_children()
-        if depth == 0:
+        if depth == 0 or len(nodeChildren)==0:
             bestPossibleValue = self.HeuristicFunc(parentNode)
             return bestPossibleValue
 
@@ -147,7 +147,7 @@ class PlayerControllerMinimax(PlayerController):
         startTime = time.time()
         visitedStates = dict()
         bestOverallHeur = -np.inf
-        bestMoveIdx = None
+        bestMoveIdx = random.randint(0,4)
         children = initial_tree_node.compute_and_get_children()
         depth = 0
         TimeOut = False
@@ -163,6 +163,8 @@ class PlayerControllerMinimax(PlayerController):
                     if heuristicValueChild > bestOverallHeur: 
                         bestOverallHeur = heuristicValueChild
                         bestMoveIdx = childNo
+                if depth>10:
+                    raise TimeoutError
                 
             except:
                 TimeOut = True
