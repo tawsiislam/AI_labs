@@ -56,20 +56,39 @@ class PlayerControllerMinimax(PlayerController):
 
     def HeuristicFunc(self, parentNode, player): #Needs to modified to be own. This is copied
         max_hook = parentNode.state.get_hook_positions()[0] 
+        min_hook = parentNode.state.get_hook_positions()[1]
         fishes = parentNode.state.get_fish_positions()
         fish_scores = parentNode.state.get_fish_scores()
         gameScore = parentNode.state.get_player_scores()[0] - parentNode.state.get_player_scores()[1]
-        total_heur = 0 
+        maxHeur = 0
+        minHeur = 0 
         
         for fish_num, fish_pos in fishes.items():
+            maxDist = self.ManhattanDistance(max_hook,fish_pos)
+            minDist = self.ManhattanDistance(min_hook,fish_pos)
 
-            x = fish_pos[0]
-            y = fish_pos[1]
+            if maxDist == 0:
+                maxHeur = fish_scores[fish_num] * 2
+            else: 
+                maxHeur += (fish_scores[fish_num]) / (maxDist + 1) 
+            if minDist == 0:
+                minHeur = fish_scores[fish_num]
+            else:
+                minHeur += (fish_scores[fish_num]) / (minDist + 1) 
+        return (maxHeur-minHeur) + gameScore*10    #TODO improve heuristic
 
-            distance_from_max_hook = abs(max_hook[0] - x) + abs(max_hook[1] - y)
+    def ManhattanDistance(self, hookCoord: tuple, fishCoord:tuple)->float:
+        """takes in two coordinates in form of tuples and returns the manhattan distance between them
+            is |dx|+|dy|
+        """
 
-            total_heur += (fish_scores[fish_num]) / (distance_from_max_hook + 0.01) 
-        return total_heur + gameScore*10    #TODO improve heuristic
+        # when being on the edge of the map one can make a step that gets you to the other side of the map
+        dx = np.min([np.abs(hookCoord[0] - fishCoord[0]), 20 - np.abs(hookCoord[0] - fishCoord[0])])
+        
+        # for y it is normal distance calculation
+        dy = np.abs(hookCoord[1] - fishCoord[1])
+
+        return dx + dy
     
     def hashkey(self, parentNode):
         hookPos = parentNode.state.get_hook_positions()
