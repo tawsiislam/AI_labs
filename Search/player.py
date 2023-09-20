@@ -151,7 +151,7 @@ class PlayerControllerMinimax(PlayerController):
         visitedStates = dict()
         bestMove = ""
         children = initial_tree_node.compute_and_get_children()
-        for depth in range (1,4):   #IDDFS
+        for depth in range (1,10):   #IDDFS
             depth = depth
             heuristicValuesChildren = []
             for childNo,child in enumerate(children):
