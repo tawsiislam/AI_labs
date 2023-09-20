@@ -54,7 +54,7 @@ class PlayerControllerMinimax(PlayerController):
             # Execute next action
             self.sender({"action": best_move, "search_time": None})
 
-    def HeuristicFunc(self, parentNode, player): #Needs to modified to be own. This is copied
+    def HeuristicFunc(self, parentNode): #Needs to modified to be own. This is copied
         max_hook = parentNode.state.get_hook_positions()[0] 
         min_hook = parentNode.state.get_hook_positions()[1]
         fishes = parentNode.state.get_fish_positions()
@@ -70,11 +70,11 @@ class PlayerControllerMinimax(PlayerController):
             if maxDist == 0:
                 maxHeur = fish_scores[fish_num] * 2
             else: 
-                maxHeur += (fish_scores[fish_num]) / (maxDist + 1) 
+                maxHeur += (fish_scores[fish_num]) / (maxDist+1) 
             if minDist == 0:
                 minHeur = fish_scores[fish_num]
             else:
-                minHeur += (fish_scores[fish_num]) / (minDist + 1) 
+                minHeur += (fish_scores[fish_num]) / (minDist+1) 
         return (maxHeur-minHeur) + gameScore*10    #TODO improve heuristic
 
     def ManhattanDistance(self, hookCoord: tuple, fishCoord:tuple)->float:
@@ -99,43 +99,42 @@ class PlayerControllerMinimax(PlayerController):
         return str(hookPos)+str(fishDict)
 
     def alphabeta(self, parentNode:Node, depth:int, visitedStates:dict, initialTime:int, alpha:int, beta:int, player:int) -> int:
-        timeExceeded = False
-        stateKey = self.hashkey(parentNode)
-        
         nodeChildren = parentNode.compute_and_get_children()
-        if depth == 0 or time.time()-initialTime >= self.timeLimit:
-            bestPossibleValue = self.HeuristicFunc(parentNode, player)
-            if time.time()-initialTime >= self.timeLimit: timeExceeded  = True
-            return bestPossibleValue, timeExceeded
-        
-        if stateKey in visitedStates:
-            return visitedStates[stateKey], timeExceeded
+        if depth == 0:
+            bestPossibleValue = self.HeuristicFunc(parentNode)
+            return bestPossibleValue
 
-        elif player == 0:   #max player
+        if time.time()-initialTime >= self.timeLimit:
+            raise TimeoutError
+        
+        stateKey = self.hashkey(parentNode)
+        if stateKey in visitedStates and visitedStates[stateKey][0] >= depth:
+            bestPossibleValue = visitedStates[stateKey][1]
+            return bestPossibleValue
+
+        nodeChildren.sort(key=self.HeuristicFunc, reverse = True)
+        if player == 0:   #max player
             bestPossibleValue = -np.inf
             for child in nodeChildren:
-                childBestValue, timeExceeded = self.alphabeta(child, depth-1, visitedStates, initialTime, alpha, beta, 1)
+                childBestValue = self.alphabeta(child, depth-1, visitedStates, initialTime, alpha, beta, 1)
                 bestPossibleValue = np.max([bestPossibleValue, childBestValue]) 
-                if timeExceeded == True:timeExceeded=True
-                    # return bestPossibleValue, timeExceeded
                 alpha = np.max([alpha, bestPossibleValue])
-                visitedStates.update({stateKey:bestPossibleValue})
+                visitedStates.update({stateKey:[depth,bestPossibleValue]})
                 if beta <= alpha:
                     break
         elif player == 1:
             bestPossibleValue = np.inf
             
             for child in nodeChildren:
-                childBestValue, timeExceeded = self.alphabeta(child, depth-1, visitedStates, initialTime, alpha, beta, 0)
+                childBestValue = self.alphabeta(child, depth-1, visitedStates, initialTime, alpha, beta, 0)
                 bestPossibleValue = np.min([bestPossibleValue, childBestValue])
-                if timeExceeded == True:timeExceeded=True
-                    # return bestPossibleValue, timeExceeded
                 beta = np.min([beta, bestPossibleValue])
-                visitedStates.update({stateKey:bestPossibleValue})
+                visitedStates.update({stateKey:[depth,bestPossibleValue]})
                 if beta <= alpha:
                     break
-        return bestPossibleValue, timeExceeded
-    def search_best_next_move(self, initial_tree_node):
+        return bestPossibleValue
+
+    def search_best_next_move(self,initial_tree_node):
         """
         Use minimax (and extensions) to find best possible next move for player 0 (green boat)
         :param initial_tree_node: Initial game tree node
@@ -146,33 +145,25 @@ class PlayerControllerMinimax(PlayerController):
         """
 
         startTime = time.time()
-        bestOverallHeur = -np.inf
-        timeExceeded = False    #Was used to control if IDDFS would take too long, maybe better without
         visitedStates = dict()
-        bestMove = ""
+        bestOverallHeur = -np.inf
+        bestMoveIdx = None
         children = initial_tree_node.compute_and_get_children()
         depth = 0
-        maxDepth = 0
-        while(time.time()-startTime < self.timeLimit and timeExceeded==False):   #IDDFS
-            depth += 1
-            heuristicValuesChildren = []
-            for childNo,child in enumerate(children):
-                heuristicValueChild, timeExceeded = self.alphabeta(child, depth-1, visitedStates, startTime, -np.inf, np.inf, 0)
-                heuristicValuesChildren.append(heuristicValueChild)
-                if timeExceeded == True: timeExceeded=True
-                if heuristicValueChild > bestOverallHeur: 
-                    bestOverallHeur = heuristicValueChild
-                    bestMove = ACTION_TO_STR[children[np.argmax(heuristicValuesChildren)].move]
-            # bestChildHeur = np.max(heuristicValuesChildren)
-            # if bestChildHeur > bestOverallHeur: 
-            #     bestOverallHeur = bestChildHeur
-            #     bestMove = ACTION_TO_STR[children[np.argmax(heuristicValuesChildren)].move]
-
-            sortedIndices = np.argsort(heuristicValuesChildren) #Move ordering
-            children = np.array(children)[sortedIndices]
-            if timeExceeded == True: timeExceeded=True
-            # bestMove = ACTION_TO_STR[children[bestMoveInt].move]
-
-
-        # random_move = random.randrange(5)
-        return bestMove
+        TimeOut = False
+        while(TimeOut == False):
+            try:
+                depth += 1
+                bestValue = -np.inf
+                bestMove = None
+                heuristicValuesChildren = []
+                for childNo, child in enumerate(children):
+                    heuristicValueChild = self.alphabeta(child, depth-1, visitedStates, startTime, -np.inf, np.inf, 0)
+                    heuristicValuesChildren.append(heuristicValueChild)
+                    if heuristicValueChild > bestOverallHeur: 
+                        bestOverallHeur = heuristicValueChild
+                        bestMoveIdx = childNo
+                
+            except:
+                TimeOut = True
+        return ACTION_TO_STR[children[bestMoveIdx].move]
