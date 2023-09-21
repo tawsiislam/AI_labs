@@ -29,7 +29,7 @@ class PlayerControllerHuman(PlayerController):
 class PlayerControllerMinimax(PlayerController):
 
     def __init__(self):
-        self.timeLimit = 0.075*0.795
+        self.timeLimit = 0.075*0.793
         # self.max_depth = 3
         super(PlayerControllerMinimax, self).__init__()
 
@@ -65,19 +65,22 @@ class PlayerControllerMinimax(PlayerController):
         maxHeur = 0
         minHeur = 0 
         
+        bestFishHeur = -np.inf
+
         for fish_num, fish_pos in fishes.items():
             #check dist to both hooks
             maxDist = self.ManhattanDistance(max_hook,fish_pos)
             minDist = self.ManhattanDistance(min_hook,fish_pos)
 
-            if maxDist == 0 and fish_scores[fish_num]>0: # comment: why check positive score?
-                maxHeur += fish_scores[fish_num] * 10
+            if maxDist == 0 and fish_scores[fish_num]>0: 
+                maxHeur += fish_scores[fish_num] * 12
             else: 
                 maxHeur += (fish_scores[fish_num]) / (maxDist+1) 
             if minDist == 0 and fish_scores[fish_num]>0:
                 minHeur += fish_scores[fish_num]
             else:
                 minHeur += ( (fish_scores[fish_num]) / (minDist+1) ) * 0.6
+                
         return (maxHeur-minHeur) + gameScore*40    #TODO improve heuristic
 
     def ManhattanDistance(self, hookCoord: tuple, fishCoord:tuple)->float:
