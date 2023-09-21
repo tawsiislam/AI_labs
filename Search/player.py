@@ -112,7 +112,8 @@ class PlayerControllerMinimax(PlayerController):
             bestPossibleValue = visitedStates[stateKey][1]
             return bestPossibleValue
 
-        nodeChildren.sort(key=self.HeuristicFunc, reverse = True)
+        nodeChildren.sort(key=self.HeuristicFunc, reverse = True) #Best to worst
+        
         if player == 0:   #max player
             bestPossibleValue = -np.inf
             for child in nodeChildren:
@@ -125,7 +126,7 @@ class PlayerControllerMinimax(PlayerController):
         elif player == 1:
             bestPossibleValue = np.inf
             
-            for child in nodeChildren:
+            for child in reversed(nodeChildren):
                 childBestValue = self.alphabeta(child, depth-1, visitedStates, initialTime, alpha, beta, 0)
                 bestPossibleValue = np.min([bestPossibleValue, childBestValue])
                 beta = np.min([beta, bestPossibleValue])
@@ -147,7 +148,6 @@ class PlayerControllerMinimax(PlayerController):
         startTime = time.time()
         visitedStates = dict()
         bestOverallHeur = -np.inf
-        bestMoveIdx = random.randint(0,4)
         children = initial_tree_node.compute_and_get_children()
         depth = 0
         TimeOut = False
@@ -155,17 +155,16 @@ class PlayerControllerMinimax(PlayerController):
             try:
                 depth += 1
                 bestValue = -np.inf
-                bestMove = None
-                heuristicValuesChildren = []
+                # heuristicValuesChildren = []
                 for childNo, child in enumerate(children):
                     heuristicValueChild = self.alphabeta(child, depth-1, visitedStates, startTime, -np.inf, np.inf, 0)
-                    heuristicValuesChildren.append(heuristicValueChild)
+                    # heuristicValuesChildren.append(heuristicValueChild)
                     if heuristicValueChild > bestOverallHeur: 
                         bestOverallHeur = heuristicValueChild
-                        bestMoveIdx = childNo
-                if depth>10:
-                    raise TimeoutError
+                        bestMove = ACTION_TO_STR[child.move]
+                # if depth>10:
+                #     raise TimeoutError
                 
             except:
                 TimeOut = True
-        return ACTION_TO_STR[children[bestMoveIdx].move]
+        return bestMove
