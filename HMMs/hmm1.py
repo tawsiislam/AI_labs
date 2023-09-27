@@ -64,12 +64,12 @@ def VectorMultiplication(vectorA: list, vectorB: list):
     multiplies two vectors
     """
         
-    if len(vectorA) != len(vectorB):
-        # if one is scalar and other is vector, multiply each element of vector by scalar
-        if len(vectorA) == 1:
-            return [vectorA[0] * b for b in vectorB]
-        elif len(vectorB) == 1:
-            return [a * vectorB[0] for a in vectorA]
+    # if len(vectorA) != len(vectorB):
+    #     # if one is scalar and other is vector, multiply each element of vector by scalar
+    #     if len(vectorA) == 1:
+    #         return [vectorA[0] * b for b in vectorB]
+    #     elif len(vectorB) == 1:
+    #         return [a * vectorB[0] for a in vectorA]
         # else:
         #     raise Exception("Vectors must be of same length")
 
@@ -88,23 +88,23 @@ def GetCollumn(matrix: list, col: int):
 
 
 
-def ForwardAlgorithm(alpha:float, emissionMatrix:list, observationsequence:list, transitionmatrix:list, emissionmatrix:list, j:int, N:int):
+def ForwardAlgorithm(alpha:float, emissionMatrix:list, observationsequence:list, transitionmatrix:list, j:int, N:int):
     """
     a.k.a. alpha-pass.
     Given an observation sequence, calculate the probability of the observation sequence
     for 2<=t<=T, i.e. initial alpha is given
     """
     if len(observationsequence) == 0:
-        return sum(alpha)
+        return sum(alpha) 
     
     # alphaNew is sum from 1 to N of alpha(i,t-1) * a(i,j) * b(j,ot)
-    alphaNewTemp = [ sum(  VectorMultiplication( alpha, GetCollumn(transitionmatrix, i) )  ) for i in range(N) ]
+    alphaNewTemp = [ sum(  VectorMultiplication( alpha , GetCollumn(transitionmatrix, i) )  ) for i in range(j) ]
 
     alphaNew = VectorMultiplication( alphaNewTemp, GetCollumn(emissionMatrix, observationsequence[0]) )
     
     # alphaNew = ForwardAlgorithm(alphaNew, emissionMatrix, observationsequence[1:], transitionmatrix, emissionmatrix, j, N)
 
-    return ForwardAlgorithm(alphaNew, emissionMatrix, observationsequence[1:], transitionmatrix, emissionmatrix, j, N)
+    return ForwardAlgorithm(alphaNew, emissionMatrix, observationsequence[1:], transitionmatrix, j, N)
 
 
 
@@ -113,7 +113,8 @@ def ForwardAlgorithm(alpha:float, emissionMatrix:list, observationsequence:list,
 4 4 0.0 0.8 0.1 0.1 0.1 0.0 0.8 0.1 0.1 0.1 0.0 0.8 0.8 0.1 0.1 0.0 
 4 4 0.9 0.1 0.0 0.0 0.0 0.9 0.1 0.0 0.0 0.0 0.9 0.1 0.1 0.0 0.0 0.9 
 1 4 1.0 0.0 0.0 0.0 
-8 0 1 2 3 0 1 2 3
+8 0 1 2 3 0 1 2 3 
+
 
 """
 
@@ -126,7 +127,7 @@ def main():
     
     # there are M different emissions
     # for example if M = 3 possible different emissions, they would be identified by 0, 1 and 2 in the emission sequence
-    emissionSequence = [int(x) for x in input().split()] # emission sequence
+    emissionSequence = [int(x) for x in input().split()] # observation sequence
     
     # check number of different emmisions: # N is number of possible states
     M = max(emissionSequence[1:]) + 1 # +1 because emissionSequence starts at 0
@@ -138,27 +139,17 @@ def main():
     B = ParseMatrix(B)
     pi = ParseMatrix(pi)
 
-
-    # next state is A*pi
-    # xNew = MatrixMultiplication(pi, A) # return is list of lists
-    
-
-    # next emission is B*xNew
-    # outPut = MatrixMultiplication(xNew, B)
-    
+    #---------------------------------------------------------------------------
 
 
-    # insert sizeOfOutput at the beginning of outPut
-    # outPut[0].insert(0, len(outPut[0]))
-    # outPut[0].insert(0, len(outPut))
     
     
     # calculate probability of emission sequence using forward algorithm
-
-    # initial alpha
+    # initial alpha,      pi[0] gives initial state probability distribution as a vector (list)
     aplpha1 = VectorMultiplication(pi[0], GetCollumn(B, emissionSequence[1] ) )
+    
 
-    # print("alpha1", aplpha1)
+    
 
     # j is number of collumns in A
     j = len(A[0])
@@ -167,12 +158,14 @@ def main():
 
     # emissionSequence[2:] because first element tells size, second element is first emission, etc
 
-    if len(emissionSequence) > 2:
-        pObservationsGivenLambda = ForwardAlgorithm(aplpha1, B, emissionSequence[2:], A, B, j, M)
-    else: pObservationsGivenLambda = sum(aplpha1)
+    # if len(emissionSequence) > 2:
+    #     pObservationsGivenLambda = ForwardAlgorithm(aplpha1, B, emissionSequence[2:], A, B, j, M)
+    # else: pObservationsGivenLambda = sum(aplpha1)
+    pObservationsGivenLambda = ForwardAlgorithm(aplpha1, B, emissionSequence[2:], A, j, M)
     
-    print(round(pObservationsGivenLambda, 6))
-
+    # print(round(pObservationsGivenLambda, 6))
+    print(pObservationsGivenLambda)
+    # print("is same as answer: ", 0.090276 ==round(pObservationsGivenLambda, 6))
 
 
 
