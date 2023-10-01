@@ -81,9 +81,9 @@ def GetColumn(matrix: list, col: int):
 
 def alphaPass(A: list, B: list, pi: list, O: list):
     totStateIterable = range(len(A)) #Substitue repeating range(len(A)) to create a loop
-    totObsIterable = range(len(B))
+    totObsIterable = range(len(O))
 
-    alpha = [[0 for obs in totObsIterable] for state in totStateIterable]
+    alpha = [[0 for obs in totStateIterable] for state in totObsIterable]
     c = [0 for obs in totObsIterable]
     for state in totStateIterable:
         alpha[0][state] = pi[state]*B[state][O[0]]
@@ -103,6 +103,23 @@ def alphaPass(A: list, B: list, pi: list, O: list):
     return alpha, c 
 
 
+def betaPass(A: list, B: list, O: list, c: list):
+    totStateIterable = range(len(A)) #Substitue repeating range(len(A)) to create a loop
+    totObsIterable = range(len(O))
+
+    beta = [[0 for obs in totStateIterable] for state in totObsIterable]
+
+    for state in totStateIterable:
+        beta[-1][state] = 1/c[-1] #Get last element. c here is not inversed
+
+    for obs_t in reversed(totObsIterable[0:-1]):
+        for state_i in totStateIterable:
+            for state_j in totStateIterable:
+                beta[obs_t][state_i] += A[state_i][state_j]*B[state_j][O[obs_t+1]]*beta[obs_t+1][state_j]
+            beta[obs_t][state_i] /= c[obs_t]
+    
+    print("hello")
+    return beta
 
     
 
@@ -134,11 +151,12 @@ def main():
     A = ParseMatrix(A)
     B = ParseMatrix(B)
     pi = ParseMatrix(pi)
-    # emissionSequence = ParseMatrix(emissionSequence)
+    emissionSequence = emissionSequence[1:]
 
 
     #---------------------------------------------------------------------------
-    alpha,c = alphaPass(A, B, pi[0], emissionSequence[1:])
+    alpha,c = alphaPass(A, B, pi[0], emissionSequence)
+    beta = betaPass(A, B, emissionSequence, c)
 
 
 
