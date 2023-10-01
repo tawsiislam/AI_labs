@@ -1,4 +1,5 @@
 import sys
+from math import log
 def ParseMatrix(matrixStr: str):
     """
     splits string matrix into a matrix of floats
@@ -22,62 +23,12 @@ def ParseMatrix(matrixStr: str):
         matrix.append(row)
     return matrix
     
-
-
-def matrix_multiplication(matA, matB):
-    """
-    Takes in two matrices and returns their product
-    A: nDimA x mDimA
-    B: nDimB x mDimB
-    product: nDimA x mDimB
-
-    requires mDimA == nDimB
-    """
-    # Get dimensions of the matrices
-    nDimA = len(matA)
-    mDimA = len(matA[0])
-
-    nDimB = len(matB)
-    mDimB = len(matB[0])
-
-    # Check if matrices can be multiplied
-    if mDimA != nDimB:
-        raise Exception("Matrices cannot be multiplied")
-
-    # Perform matrix multiplication using list comprehensions
-    product = [[sum( matA[row][k] * matB[k][col] for k in range(mDimA) ) for col in range(mDimB)] for row in range(nDimA)]
-
-    return product
-
-
-
-
-
-def VectorMultiplication(vectorA: list, vectorB: list):
-    """
-    multiplies two vectors
-    """
-        
-    # if len(vectorA) != len(vectorB):
-    #     # if one is scalar and other is vector, multiply each element of vector by scalar
-    #     if len(vectorA) == 1:
-    #         return [vectorA[0] * b for b in vectorB]
-    #     elif len(vectorB) == 1:
-    #         return [a * vectorB[0] for a in vectorA]
-        # else:
-        #     raise Exception("Vectors must be of same length")
-
-    return [a * b for a, b in zip(vectorA, vectorB)]
-
-
-
-
-def GetColumn(matrix: list, col: int):
-    """
-    returns a collumn from a matrix 
-    """
-    column = [row[col] for row in matrix]
-    return column
+def outputMatrix(matrix):
+    matrix_str = str(len(matrix))+' '+str(len(matrix[0]))+' '
+    for row in matrix:
+        for col in row:
+            matrix_str += str(round(col,6))+' '
+    return matrix_str
 
 def alphaPass(A: list, B: list, pi: list, O: list):
     totStateIterable = range(len(A)) #Substitue repeating range(len(A)) to create a loop
@@ -88,8 +39,9 @@ def alphaPass(A: list, B: list, pi: list, O: list):
     for state in totStateIterable:
         alpha[0][state] = pi[state]*B[state][O[0]]
         c[0] += alpha[0][state]
+    c[0] = 1/c[0]
     for state in totStateIterable:
-        alpha[0][state] /= c[0]  #Normalising alpha[state][0]/c[0]
+        alpha[0][state] *= c[0]  #Normalising alpha[state][0]/c[0]
 
     for obs_t in totObsIterable[1:]:
         for state_i in totStateIterable:
@@ -97,8 +49,9 @@ def alphaPass(A: list, B: list, pi: list, O: list):
                 alpha[obs_t][state_i] = alpha[obs_t][state_i] + alpha[obs_t-1][state_j]*A[state_j][state_i]
             alpha[obs_t][state_i] *= B[state_i][O[obs_t]]
             c[obs_t] += alpha[obs_t][state_i]
+        c[obs_t] = 1/c[obs_t]
         for state_i in totStateIterable:
-            alpha[obs_t][state_i] /= c[obs_t]
+            alpha[obs_t][state_i] *= c[obs_t]
 
     return alpha, c 
 
@@ -107,40 +60,114 @@ def betaPass(A: list, B: list, O: list, c: list):
     totStateIterable = range(len(A)) #Substitue repeating range(len(A)) to create a loop
     totObsIterable = range(len(O))
 
-    beta = [[0 for obs in totStateIterable] for state in totObsIterable]
+    beta = [[0 for state in totStateIterable] for obs in totObsIterable]
 
     for state in totStateIterable:
-        beta[-1][state] = 1/c[-1] #Get last element. c here is not inversed
+        beta[-1][state] = c[-1] #Get last element. c here is not inversed
 
     for obs_t in reversed(totObsIterable[0:-1]):
         for state_i in totStateIterable:
             for state_j in totStateIterable:
                 beta[obs_t][state_i] += A[state_i][state_j]*B[state_j][O[obs_t+1]]*beta[obs_t+1][state_j]
-            beta[obs_t][state_i] /= c[obs_t]
+            beta[obs_t][state_i] *= c[obs_t]
     
-    print("hello")
     return beta
 
+def gammaFunc(A: list, B: list, O: list, alpha: list, beta: list):
+    totStateIterable = range(len(A))
+    totObsIterable = range(len(O))
+    gamma = [[0 for state in totStateIterable] for obs in totObsIterable]
+    digamma = [[[0 for state_j in totStateIterable] for state_i in totStateIterable] for obs in totObsIterable]
+
+    for obs_t in totObsIterable[:-1]:
+        for state_i in totStateIterable:
+            for state_j in totStateIterable:
+                digamma[obs_t][state_i][state_j] = alpha[obs_t][state_i]*A[state_i][state_j]*B[state_j][O[obs_t+1]]*beta[obs_t+1][state_j]
+                gamma[obs_t][state_i] += digamma[obs_t][state_i][state_j]
+
+    for state_i in totStateIterable:
+        gamma[-1][state_i] = alpha[-1][state_i]
+
+    return gamma, digamma
+
+def reestimate(A: list, B: list, pi: list, O: list, gamma: list, digamma: list):
+    totStateIterable = range(len(A))
+    totObsIterable = range(len(O))
+    totMStateIterable = range(len(B[0]))
+
+    new_pi = [0 for state in totStateIterable]
+    new_A = [[0 for state in totStateIterable] for state in totStateIterable]
+    new_B = [[0 for obs in range(len(B[0]))] for state in range(len(B))]
+
+    for state_i in totStateIterable:
+        new_pi[state_i] = gamma[0][state_i]
     
+    for state_i in totStateIterable:    # Re-estimate A
+        denom = 0
+        for obs_t in totObsIterable[:-1]:
+            denom += gamma[obs_t][state_i]
+        for state_j in totStateIterable:
+            numer = 0
+            for obs_t in totObsIterable[:-1]:
+                numer += digamma[obs_t][state_i][state_j]
+            new_A[state_i][state_j] = numer/denom
+    
+    for state_i in totStateIterable:    # Re-estimate B
+        denom = 0
+        for obs_t in totObsIterable:
+            denom += gamma[obs_t][state_i]
+        for state_j in totMStateIterable:
+            numer = 0
+            for obs_t in totObsIterable:
+                if (O[obs_t]==state_j):
+                    numer += gamma[obs_t][state_i]
+            new_B[state_i][state_j] = numer/denom
+    return new_A, new_B, new_pi
+
+def logProbFunc(c: list, lenO: int):
+    totObsIterable = range(lenO)
+    logProb = 0
+    for obs_t in totObsIterable:
+        logProb += log(c[obs_t])  #Uses math.log
+    
+    return -logProb
 
 def BaumWelch_Algo(A: list, B: list, pi: list, O: list):
     max_iter = 100
     iter = 0
-    overallLogProb = float(-'inf')
+    prevLogProb = float('-inf')
 
+    
 
-    pass
+    for iter in range(max_iter):
+        alpha,c = alphaPass(A, B, pi, O)
+        beta = betaPass(A, B, O, c)
+        gamma, digamma = gammaFunc(A, B, O, alpha, beta)
+        A, B, pi = reestimate(A, B, pi, O, gamma, digamma)
+        newLogProb = logProbFunc(c,len(O))
+        if  newLogProb > prevLogProb:
+            prevLogProb = newLogProb
+        else:
+            break
+    
+    return A, B
 
 def main():
     print("run")
     # read the inputs:
-    A = [float(x) for x in sys.argv[1].split()] # transition matrix
-    B = [float(x) for x in sys.argv[2].split()] # emission matrix
-    pi = [float(x) for x in sys.argv[3].split()] # initial state probability distribution
+    A = [float(x) for x in input().split()] # transition matrix
+    B = [float(x) for x in input().split()] # emission matrix
+    pi = [float(x) for x in input().split()] # initial state probability distribution
+    emissionSequence = [int(x) for x in input().split()] # observation sequence
+
+    # A = [float(x) for x in sys.argv[1].split()] # transition matrix
+    # B = [float(x) for x in sys.argv[2].split()] # emission matrix
+    # pi = [float(x) for x in sys.argv[3].split()] # initial state probability distribution
+    # emissionSequence = [int(x) for x in sys.argv[4].split()] # observation sequence
     
     # there are M different emissions
     # for example if M = 3 possible different emissions, they would be identified by 0, 1 and 2 in the emission sequence
-    emissionSequence = [int(x) for x in sys.argv[4].split()] # observation sequence
+    
     
     # check number of different emmisions: # N is number of possible states
     # M = max(emissionSequence[1:]) + 1 # +1 because emissionSequence starts at 0
@@ -155,8 +182,10 @@ def main():
 
 
     #---------------------------------------------------------------------------
-    alpha,c = alphaPass(A, B, pi[0], emissionSequence)
-    beta = betaPass(A, B, emissionSequence, c)
+    A, B = BaumWelch_Algo(A, B, pi[0], emissionSequence)
+    print(outputMatrix(A))
+    print(outputMatrix(B))
+    
 
 
 
