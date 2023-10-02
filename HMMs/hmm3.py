@@ -1,4 +1,3 @@
-import sys
 from math import log
 def ParseMatrix(matrixStr: str):
     """
@@ -19,16 +18,18 @@ def ParseMatrix(matrixStr: str):
         for colIndx in range(mDim):
 
             # add element to row: rowIndx: is the row number, mDim: is the number of columns, colIndx: is the column number
-            row.append(matrixElements[rowIndx * mDim + colIndx])
+            row.append(float(matrixElements[rowIndx * mDim + colIndx]))
         matrix.append(row)
     return matrix
     
 def outputMatrix(matrix):
-    matrix_str = str(len(matrix))+' '+str(len(matrix[0]))+' '
+    matrix_list = []
+    matrix_list.append(len(matrix))
+    matrix_list.append(len(matrix[0]))
     for row in matrix:
-        for col in row:
-            matrix_str += str(round(col,6))+' '
-    return matrix_str
+        for elem in row:
+           matrix_list.append(round(elem,6))
+    print(' '.join(map(str,matrix_list)))
 
 def alphaPass(A: list, B: list, pi: list, O: list):
     totStateIterable = range(len(A)) #Substitue repeating range(len(A)) to create a loop
@@ -137,8 +138,6 @@ def BaumWelch_Algo(A: list, B: list, pi: list, O: list):
     iter = 0
     prevLogProb = float('-inf')
 
-    
-
     for iter in range(max_iter):
         alpha,c = alphaPass(A, B, pi, O)
         beta = betaPass(A, B, O, c)
@@ -153,7 +152,6 @@ def BaumWelch_Algo(A: list, B: list, pi: list, O: list):
     return A, B
 
 def main():
-    print("run")
     # read the inputs:
     A = [float(x) for x in input().split()] # transition matrix
     B = [float(x) for x in input().split()] # emission matrix
@@ -183,8 +181,8 @@ def main():
 
     #---------------------------------------------------------------------------
     A, B = BaumWelch_Algo(A, B, pi[0], emissionSequence)
-    print(outputMatrix(A))
-    print(outputMatrix(B))
+    outputMatrix(A)
+    outputMatrix(B)
     
 
 
