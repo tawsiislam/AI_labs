@@ -149,7 +149,7 @@ def BaumWelch_Algo(A: list, B: list, pi: list, O: list):
         else:
             break
     
-    return A, B
+    return A, B, pi
 
 def main():
     # read the inputs:
@@ -180,7 +180,7 @@ def main():
 
 
     #---------------------------------------------------------------------------
-    A, B = BaumWelch_Algo(A, B, pi[0], emissionSequence)
+    A, B, pi = BaumWelch_Algo(A, B, pi[0], emissionSequence)
     outputMatrix(A)
     outputMatrix(B)
     

@@ -3,6 +3,44 @@
 from player_controller_hmm import PlayerControllerHMMAbstract
 from constants import *
 import random
+from hmm3 import BaumWelch_Algo
+
+def init_pi(no_species: int):
+    pass
+
+def row_stoch(list_len: int, biased_mean = 0):
+    if biased_mean == 0: 
+        mean = 1/list_len
+    else:
+        mean = biased_mean  # Option to choose the mean
+    std = 0.1   # Standard deviation
+    row = []
+    row_sum = 0
+    for elem in range(list_len):
+        value = random.gauss(mean,std)
+        row.append(value)
+        row_sum += value
+    for elem in row:
+        row[elem] /= row_sum    #Normalise the row for row stochastic rows
+    return row
+
+
+class HMM_model:
+    def __init__(self):
+        """
+        Initialise row stochastic matrices where A is NxN, B is NxM and pi is 1xN.
+        N = N_SPECIES
+        M = N_EMISSIONS
+        """
+        self.pi = row_stoch(N_SPECIES)
+        self.A = [row_stoch(N_SPECIES) for specie in range(N_SPECIES)]
+        self.B = [row_stoch(N_EMISSIONS) for specie in range(N_SPECIES)]
+
+    def updateModel(self,emissionSeq):
+        """
+        Update the model using Baum-Welch using previous model and emission sequence.
+        """
+        self.A, self.B, self.pi = BaumWelch_Algo(self.A, self.B, self.pi, emissionSeq)
 
 
 class PlayerControllerHMM(PlayerControllerHMMAbstract):
@@ -11,7 +49,9 @@ class PlayerControllerHMM(PlayerControllerHMMAbstract):
         In this function you should initialize the parameters you will need,
         such as the initialization of models, or fishes, among others.
         """
-        pass
+        self.fishModels = [HMM_model() for specie in range(N_SPECIES)]
+        self.fishObs = [(fish_id,[]) for fish_id in range(N_FISH)]
+        self.curr_fish_obs = []
 
     def guess(self, step, observations):
         """
