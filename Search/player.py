@@ -55,41 +55,53 @@ class PlayerControllerMinimax(PlayerController):
             self.sender({"action": best_move, "search_time": None})
 
     def HeuristicFunc(self, parentNode): #Needs to modified to be own. This is copied
-        max_hook = parentNode.state.get_hook_positions()[0] 
-        min_hook = parentNode.state.get_hook_positions()[1]
-        fishes = parentNode.state.get_fish_positions()
-        fish_scores = parentNode.state.get_fish_scores()
-        maxPlayerScore, minPlayerScore = parentNode.state.get_player_scores()
+        max_hook = parentNode.state.get_hook_positions()[0] # my pos
+        min_hook = parentNode.state.get_hook_positions()[1] # enemy pos
+        fishes = parentNode.state.get_fish_positions() # fish positions
+        fish_scores = parentNode.state.get_fish_scores() # fish scores
+        maxPlayerScore, minPlayerScore = parentNode.state.get_player_scores() # player scores
         # gameScore = parentNode.state.get_player_scores()[0] - parentNode.state.get_player_scores()[1]
-        gameScore = maxPlayerScore - minPlayerScore
+        gameScore = maxPlayerScore - minPlayerScore 
         maxHeur = 0
         minHeur = 0 
         
-        bestFishHeur = -np.inf
+        bestFishHeur = -np.inf # useless
 
+        # iterate over all fishes
         for fish_num, fish_pos in fishes.items():
+            
             #check dist to both hooks
             maxDist = self.ManhattanDistance(max_hook,fish_pos)
             minDist = self.ManhattanDistance(min_hook,fish_pos)
 
+            # if fish on my hook and fish with positive score (good fish)
             if maxDist == 0 and fish_scores[fish_num]>0: 
                 maxHeur += fish_scores[fish_num] * 12
+            
+            # if fish not on my hook or fish with negative score (bad fish)
+            # if fish has negative score then we are penalized for being close to it
+            # if fish has positive score then we are rewarded for being close to it 
             else: 
                 maxHeur += (fish_scores[fish_num]) / (maxDist+1) 
+            
+            # min player / enemy, score has less weight for enemy
             if minDist == 0 and fish_scores[fish_num]>0:
-                minHeur += fish_scores[fish_num]
+                minHeur += fish_scores[fish_num] 
             else:
                 minHeur += ( (fish_scores[fish_num]) / (minDist+1) ) * 0.6
-                
-        return (maxHeur-minHeur) + gameScore*40    #TODO improve heuristic
+        
+        # more weight to gameScore, evaluate hook positions, maximize difference of hook position evaluation
+        return (maxHeur-minHeur) + gameScore*40  
 
     def ManhattanDistance(self, hookCoord: tuple, fishCoord:tuple)->float:
         """takes in two coordinates in form of tuples and returns the manhattan distance between them
             is |dx|+|dy|
         """
 
-        # when being on the edge of the map one can make a step that gets you to the other side of the map
+        
         dx = np.abs(hookCoord[0] - fishCoord[0])
+        
+        # when being on the edge of the map one can make a step that gets you to the other side of the map
         mindx = np.min([dx,20-dx])
         # for y it is normal distance calculation
         dy = np.abs(hookCoord[1] - fishCoord[1])
@@ -118,7 +130,7 @@ class PlayerControllerMinimax(PlayerController):
         
         # check if state has been visited before and if it has been visited at a higher depth
         stateKey = self.hashkey(parentNode)
-        if stateKey in visitedStates and visitedStates[stateKey][0] >= depth:
+        if stateKey in visitedStates and visitedStates[stateKey][0] >= depth: # heuristic from higher depth is better approximation
             bestPossibleValue = visitedStates[stateKey][1]
             return bestPossibleValue
 
@@ -179,7 +191,7 @@ class PlayerControllerMinimax(PlayerController):
                         bestOverallHeur = heuristicValueChild
                         bestMove = ACTION_TO_STR[child.move]
                 
-                
+                # iterative deepening, increase depth by 2, we look at next time we play
                 depth += 2
                 
                 
