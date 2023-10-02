@@ -106,7 +106,7 @@ def ForwardAlgorithm(alpha:float, emissionMatrix:list, observationsequence:list,
 
 
 
-def ViterbiAlgorithm(delta:float, emissionMatrix:list, observationsequence:list, transitionmatrix:list, j:int, N:int, stateSequence:list = [], sumOfProbabilities:list = []):
+# def ViterbiAlgorithm(delta:float, emissionMatrix:list, observationsequence:list, transitionmatrix:list, j:int, N:int, stateSequence:list = [], sumOfProbabilities:list = []):
     """
     a.k.a. Viterbi-pass.
     Given an observation sequence, calculate the most probable sequence of states
@@ -138,30 +138,35 @@ def ViterbiAlgorithm(delta:float, emissionMatrix:list, observationsequence:list,
     # given the current distibution (delta) calc. probability to transition to next state of the observation sequence
     probabilities = [ [ [] for i1 in range(j)] for i2 in range(j) ]
     
-    for currState in range(j):
-        for nextState in range(j):
+    # for currState in range(j):
+    #     for nextState in range(j):
             
             
-            probTemp = transitionmatrix[currState][nextState] *emissionMatrix[nextState][observationsequence[0]] 
+    #         # probTemp = transitionmatrix[currState][nextState] *emissionMatrix[nextState][observationsequence[0]] 
             
-            # should be no scenario in which probTemp < 0
-            if probTemp > 0:
-                probTemp = log(probTemp) + delta[currState]
-            else:
-                probTemp = delta[currState]
+    #         # should be no scenario in which probTemp < 0
+    #         if probTemp > 0:
+    #             probTemp = log(probTemp) + delta[currState]
+    #         else:
+    #             probTemp = delta[currState]
 
 
-            # note, since we use log space, delta can be negative
-            probabilities[currState][nextState] = probTemp
+    #         # note, since we use log space, delta can be negative
+    #         probabilities[currState][nextState] = probTemp
+
+    # delta_t = max(   [ [ delta[currState] + log( transitionmatrix[currState][nextState] * emissionMatrix[nextState][observationsequence[0]] ) for currState in range(j)] for nextState in range(j) ]   , key = max  )
+
+
 
 
     print("probabilities", probabilities)
 
     # having all probabilities calculated, we send the maximum probability to the next iteration
 
-    maxProbability = [max(x) for x in probabilities]
+    maxProbability = [max(x) for x in probabilities] #delta_{t}
 
-    stateSequence = [x.index(max(x)) for x in probabilities]
+
+    stateSequence = [x.index(max(x)) for x in probabilities] 
     print("stateSequence", stateSequence)
 
     
@@ -175,7 +180,27 @@ def ViterbiAlgorithm(delta:float, emissionMatrix:list, observationsequence:list,
 
     
 
+def ViterbiAlgorithm(delta0:list, emissionMatrix:list, emissionSequence:list, transitionmatrix:list, j:int, N:int, stateSequence:list = [], sumOfProbabilities:list = []):
+    
+    pathProb = [[0 for emission in range(len(emissionSequence))] for state in range(j)] # matrix of size j x len(emissionSequence)
+    stateProb = [[0 for emission in range(len(emissionSequence))] for state in range(j)]
 
+    for state_i in range(len(delta0)):
+        pathProb[0][state_i] = delta0[state_i]
+
+    for obs_t in range(1, len(emissionSequence)):
+        ptr = []
+        for state_i in range(len(transitionmatrix)):
+            deltaList = []
+            for state_j in range(len(transitionmatrix)):
+                deltaList.append(pathProb[obs_t-1][state_j] * transitionmatrix[state_j][state_i]* emissionMatrix[state_i][emissionSequence[obs_t]]) 
+            max_path_prob =  max(deltaList) 
+            pathProb[obs_t][state_i] = max_path_prob
+            stateProb[obs_t][state_i] = deltaList.index(max_path_prob)
+
+    # TODO: Traverse to find the paths
+
+    return 0
 
 def main():
     # read the inputs:
@@ -208,12 +233,23 @@ def main():
     
     
     # we do viterbi algorithm to find the most probable sequence of states
+    
+    
 
     # initialize delta
     delta0 = VectorMultiplication(pi[0], GetCollumn(B, emissionSequence[1] ) )
+
+    # initialize deltaList as matrix of size len(emissionSequence) x j
+    deltaList = [ [0 for i in range( len(delta0) )] for i in range(j) ]
+    
+    
+
+    #deltaList[0] = delta0 # set first row of deltaList to delta0
+
+    
     
     # convert to log space if not 0 or negative, this is to avoid underflow
-    delta0 = [log(x) if x > 0 else x for x in delta0]
+    # delta0 = [log(x) if x > 0 else x for x in delta0]
 
     stateSequenceList = [[] for i in range(j)] # list of lists, each list is a state sequence
     sumOfProbabilities = [0 for i in range(j)] # list of probabilities for each state sequence
@@ -223,7 +259,7 @@ def main():
     # print("sumOfProbabilities", sumOfProbabilities)
 
 
-    stateSequenceList, sumOfProbabilities, indxMostProbable = ViterbiAlgorithm(delta0, B, emissionSequence[2:], A, j, M, stateSequenceList, sumOfProbabilities)
+    stateSequenceList, sumOfProbabilities, indxMostProbable = ViterbiAlgorithm(delta0, B, emissionSequence[1:], A, j, M, stateSequenceList, sumOfProbabilities)
 
     
 
