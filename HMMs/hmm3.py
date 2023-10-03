@@ -157,20 +157,6 @@ def main():
     B = [float(x) for x in input().split()] # emission matrix
     pi = [float(x) for x in input().split()] # initial state probability distribution
     emissionSequence = [int(x) for x in input().split()] # observation sequence
-
-    # A = [float(x) for x in sys.argv[1].split()] # transition matrix
-    # B = [float(x) for x in sys.argv[2].split()] # emission matrix
-    # pi = [float(x) for x in sys.argv[3].split()] # initial state probability distribution
-    # emissionSequence = [int(x) for x in sys.argv[4].split()] # observation sequence
-    
-    # there are M different emissions
-    # for example if M = 3 possible different emissions, they would be identified by 0, 1 and 2 in the emission sequence
-    
-    
-    # check number of different emmisions: # N is number of possible states
-    # M = max(emissionSequence[1:]) + 1 # +1 because emissionSequence starts at 0
-    
-
     
     # convert inputs to matrices
     A = ParseMatrix(A)
