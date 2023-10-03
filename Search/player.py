@@ -7,6 +7,15 @@ from fishing_game_core.shared import ACTION_TO_STR
 import numpy as np
 import time
 
+"""
+to play: 
+
+conda activate fishingderby
+
+python main.py settings.yml
+
+"""
+
 
 class PlayerControllerHuman(PlayerController):
     def player_loop(self):
