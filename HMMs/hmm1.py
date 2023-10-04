@@ -150,7 +150,7 @@ def main():
     
 
     
-
+    
     # j is number of collumns in A
     j = len(A[0])
 

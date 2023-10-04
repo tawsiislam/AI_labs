@@ -4,7 +4,7 @@
 
 # You should output the most probable sequence of states as zero-based indices separated by spaces. Do not output the length of the sequence.
 
-from math import log
+
 
 
 
@@ -178,29 +178,117 @@ def ForwardAlgorithm(alpha:float, emissionMatrix:list, observationsequence:list,
 
     return [], [], 0
 
+
+"""
+markov property / assumption
+different kinds of markov processes/properties
+how is it initialized the markov process?
+one heuristic?
+what happens when the normal spreads out to -100/100, normalized?
+how many possible outcomes? think about how you initialize
+what would happen if you had 1000 states? how would you initialize? (copilot)
+issue from division by zero when dividing by probability
+how to avoid underflow? log space
+how do you update hmm? how many hmms u have? why that many?
+
+
+"""
+
+
+def ViterbiAlgorithm(delta0:list, emissionMatrix:list, emissionSequence:list, transitionmatrix:list, j:int, M:int, stateSequence:list = [], sumOfProbabilities:list = []):
+    # M number of differnet emissions
+    # j number of states
+
+
     
 
-def ViterbiAlgorithm(delta0:list, emissionMatrix:list, emissionSequence:list, transitionmatrix:list, j:int, N:int, stateSequence:list = [], sumOfProbabilities:list = []):
+    # T1 is probability of most probable path so far
+    T1 = [[0 for emission in range(len(emissionSequence))] for state in range(len(emissionMatrix[0]))] # matrix of size j x len(emissionSequence)
     
-    pathProb = [[0 for emission in range(len(emissionSequence))] for state in range(j)] # matrix of size j x len(emissionSequence)
-    stateProb = [[0 for emission in range(len(emissionSequence))] for state in range(j)]
+    # most likely path so far
+    T2 = [[0 for emission in range(len(emissionSequence))] for state in range(len(emissionMatrix[0]))] # matrix of size j x len(emissionSequence)
 
-    for state_i in range(len(delta0)):
-        pathProb[0][state_i] = delta0[state_i]
+    # stateProb = [[0 for emission in range(len(emissionSequence))] for state in range(j)]
 
-    for obs_t in range(1, len(emissionSequence)):
-        ptr = []
-        for state_i in range(len(transitionmatrix)):
-            deltaList = []
-            for state_j in range(len(transitionmatrix)):
-                deltaList.append(pathProb[obs_t-1][state_j] * transitionmatrix[state_j][state_i]* emissionMatrix[state_i][emissionSequence[obs_t]]) 
-            max_path_prob =  max(deltaList) 
-            pathProb[obs_t][state_i] = max_path_prob
-            stateProb[obs_t][state_i] = deltaList.index(max_path_prob)
+    # save delta0 to T1
+    for stateI in range(j):
+        T1[stateI][0] = delta0[stateI]
+        T2[stateI][0] = 0
 
-    # TODO: Traverse to find the paths
 
-    return 0
+    for observationJ in range(1, len(emissionSequence)):
+        for stateI in range(j):
+            
+            temp = [ T1[stateK][observationJ-1] * transitionmatrix[stateK][stateI] * emissionMatrix[stateI][emissionSequence[observationJ]] for stateK in range(j) ]
+
+            T1[stateI][observationJ] =  max( temp ) 
+
+            T2[stateI][observationJ] = temp.index( T1[stateI][observationJ ])
+
+    # find most probable state to transition to the last state
+    
+    stateSequence = [0 for i in range(len(emissionSequence))]
+    
+    # find most probable last state
+    for stateI in range(j):
+        stateSequence[-1] = stateI if T1[stateI][-1] > T1[stateSequence[-1]][-1] else stateSequence[-1]
+
+
+    # traverse backwards
+    for observationJ in range(len(emissionSequence)-2, -1, -1): # start: len(emissionSequence)-2, stop: 0, step: backwards
+        stateSequence[observationJ] = T2[stateSequence[observationJ+1]][observationJ+1]
+    
+    
+
+
+
+
+
+
+
+
+
+    
+
+
+    # backpropagation, find most probable state to transition to the last state
+    # for i in range(len(T1)-1, 0, -1):
+
+    print(  " ".join(map(str, stateSequence))   )
+
+    return stateSequence
+
+
+
+
+
+
+"""
+
+4 4 0.0 0.8 0.1 0.1 0.1 0.0 0.8 0.1 0.1 0.1 0.0 0.8 0.8 0.1 0.1 0.0 
+4 4 0.9 0.1 0.0 0.0 0.0 0.9 0.1 0.0 0.0 0.0 0.9 0.1 0.1 0.0 0.0 0.9 
+1 4 1.0 0.0 0.0 0.0 
+4 1 1 2 2
+
+
+4 4 0.0 0.8 0.1 0.1 0.1 0.0 0.8 0.1 0.1 0.1 0.0 0.8 0.8 0.1 0.1 0.0 
+4 4 0.9 0.1 0.0 0.0 0.0 0.9 0.1 0.0 0.0 0.0 0.9 0.1 0.1 0.0 0.0 0.9 
+1 4 1.0 0.0 0.0 0.0 
+5 1 1 2 2 1
+
+
+5 5 0.0 0.8 0.1 0.1 0.1 0.0 0.8 0.1 0.1 0.1 0.0 0.8 0.8 0.1 0.1 0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9
+5 5 0.9 0.1 0.0 0.0 0.0 0.9 0.1 0.0 0.0 0.0 0.9 0.1 0.1 0.0 0.0 0.9 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 
+1 5 1.0 0.0 0.0 0.0 1.0
+5 1 1 2 2 1
+
+
+out: 0 1 2 1 
+"""
+
+
+
+
 
 def main():
     # read the inputs:
@@ -229,8 +317,6 @@ def main():
     j = len(A[0])
 
     
-    # emissionSequence[2:] because first element tells size, second element is first emission, etc
-    
     
     # we do viterbi algorithm to find the most probable sequence of states
     
@@ -253,13 +339,11 @@ def main():
 
     stateSequenceList = [[] for i in range(j)] # list of lists, each list is a state sequence
     sumOfProbabilities = [0 for i in range(j)] # list of probabilities for each state sequence
-    indxMostProbable = 0 # index of most probable state sequence
-
-    # print("stateSequenceList", stateSequenceList)
-    # print("sumOfProbabilities", sumOfProbabilities)
+    
 
 
-    stateSequenceList, sumOfProbabilities, indxMostProbable = ViterbiAlgorithm(delta0, B, emissionSequence[1:], A, j, M, stateSequenceList, sumOfProbabilities)
+    # emissionSequence[2:] because first element tells size, second element is first emission, etc
+    stateSequenceList = ViterbiAlgorithm(delta0, B, emissionSequence[1:], A, j, M, stateSequenceList, sumOfProbabilities)
 
     
 
@@ -269,10 +353,19 @@ def main():
 
 
 """
+
 4 4 0.0 0.8 0.1 0.1 0.1 0.0 0.8 0.1 0.1 0.1 0.0 0.8 0.8 0.1 0.1 0.0 
 4 4 0.9 0.1 0.0 0.0 0.0 0.9 0.1 0.0 0.0 0.0 0.9 0.1 0.1 0.0 0.0 0.9 
 1 4 1.0 0.0 0.0 0.0 
 4 1 1 2 2 
+
+
+
+
+5 5 0.0 0.8 0.1 0.1 0.1 0.0 0.8 0.1 0.1 0.1 0.0 0.8 0.8 0.1 0.1 0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9
+5 5 0.9 0.1 0.0 0.0 0.0 0.9 0.1 0.0 0.0 0.0 0.9 0.1 0.1 0.0 0.0 0.9 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 
+1 5 1.0 0.0 0.0 0.0 1.0
+5 1 1 2 2 1
 
 
 out: 0 1 2 1 
