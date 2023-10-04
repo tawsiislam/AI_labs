@@ -5,6 +5,22 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Attach debugger",
+            "type": "python",
+            "request": "attach",
+            "connect": {
+                "host": "127.0.0.1",
+                "port": 50452
+            },
+            "pathMappings": [
+                {
+                    "localRoot": "${workspaceFolder}",
+                    "remoteRoot": "."
+                }
+            ],
+            "justMyCode": false
+        },
+        {
             "name": "HMM3",
             "type": "python",
             "request": "launch",
@@ -16,11 +32,12 @@
             "name": "Fish derby",
             "type": "python",
             "request": "launch",
-            "program": "hmm3.py",
+            "program": "main.py",
             "console": "integratedTerminal",
             "justMyCode": false,
-            "args": ["< sequences.json"]
-        },
-        
+            "args": [
+                "< sequences.json"
+            ]
+        }
     ]
 }

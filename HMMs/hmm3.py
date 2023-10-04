@@ -1,4 +1,5 @@
 from math import log
+import sys
 def ParseMatrix(matrixStr: str):
     """
     splits string matrix into a matrix of floats
@@ -31,7 +32,7 @@ def outputMatrix(matrix):
            matrix_list.append(round(elem,6))
     print(' '.join(map(str,matrix_list)))
 
-def alphaPass(A: list, B: list, pi: list, O: list):
+def alphaPass(A: list, B: list, pi: list, O: list, scaling=True):   #Scaling suitable for Baum-Welch algorithm
     totStateIterable = range(len(A)) #Substitue repeating range(len(A)) to create a loop
     totObsIterable = range(len(O))
 
@@ -40,9 +41,10 @@ def alphaPass(A: list, B: list, pi: list, O: list):
     for state in totStateIterable:
         alpha[0][state] = pi[state]*B[state][O[0]]
         c[0] += alpha[0][state]
-    c[0] = 1/c[0]
-    for state in totStateIterable:
-        alpha[0][state] *= c[0]  #Normalising alpha[state][0]/c[0]
+    c[0] = 1/(c[0]+sys.float_info.epsilon)
+    if scaling == False:
+        for state in totStateIterable:
+            alpha[0][state] *= c[0]  #Normalising alpha[state][0]/c[0]
 
     for obs_t in totObsIterable[1:]:
         for state_i in totStateIterable:
@@ -50,9 +52,10 @@ def alphaPass(A: list, B: list, pi: list, O: list):
                 alpha[obs_t][state_i] = alpha[obs_t][state_i] + alpha[obs_t-1][state_j]*A[state_j][state_i]
             alpha[obs_t][state_i] *= B[state_i][O[obs_t]]
             c[obs_t] += alpha[obs_t][state_i]
-        c[obs_t] = 1/c[obs_t]
-        for state_i in totStateIterable:
-            alpha[obs_t][state_i] *= c[obs_t]
+        c[obs_t] = 1/(c[obs_t]+sys.float_info.epsilon)
+        if scaling == True:
+            for state_i in totStateIterable:
+                alpha[obs_t][state_i] *= c[obs_t]
 
     return alpha, c 
 
@@ -101,7 +104,7 @@ def reestimate(A: list, B: list, pi: list, O: list, gamma: list, digamma: list):
     new_B = [[0 for obs in range(len(B[0]))] for state in range(len(B))]
 
     for state_i in totStateIterable:
-        new_pi[state_i] = gamma[0][state_i]
+        new_pi[state_i] = gamma[0][state_i] #Some elements in gamma causes there to be only one non-zero element
     
     for state_i in totStateIterable:    # Re-estimate A
         denom = 0
@@ -111,7 +114,7 @@ def reestimate(A: list, B: list, pi: list, O: list, gamma: list, digamma: list):
             numer = 0
             for obs_t in totObsIterable[:-1]:
                 numer += digamma[obs_t][state_i][state_j]
-            new_A[state_i][state_j] = numer/denom
+            new_A[state_i][state_j] = numer/(denom+sys.float_info.epsilon)
     
     for state_i in totStateIterable:    # Re-estimate B
         denom = 0
@@ -122,7 +125,7 @@ def reestimate(A: list, B: list, pi: list, O: list, gamma: list, digamma: list):
             for obs_t in totObsIterable:
                 if (O[obs_t]==state_j):
                     numer += gamma[obs_t][state_i]
-            new_B[state_i][state_j] = numer/denom
+            new_B[state_i][state_j] = numer/(denom+sys.float_info.epsilon)
     return new_A, new_B, new_pi
 
 def logProbFunc(c: list, lenO: int):
@@ -133,8 +136,7 @@ def logProbFunc(c: list, lenO: int):
     
     return -logProb
 
-def BaumWelch_Algo(A: list, B: list, pi: list, O: list):
-    max_iter = 100
+def BaumWelch_Algo(A: list, B: list, pi: list, O: list, max_iter: int=10):
     iter = 0
     prevLogProb = float('-inf')
 
