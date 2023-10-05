@@ -5,9 +5,14 @@ from constants import *
 import random
 import sys
 sys.path.append("../") #Should be commented out before running in Kattis
-from hmm3 import BaumWelch_Algo, alphaPass
+from hmm3 import BaumWelch_Algo
+from hmm2 import ForwardAlgorithm
 
 def row_stoch(list_len: int, biased_mean = 0):
+    """ 
+    Creates a normal distribution that is row stochastic (row sum to 1)
+    """
+
     if biased_mean == 0: 
         mean = 1/list_len
     else:
@@ -16,7 +21,7 @@ def row_stoch(list_len: int, biased_mean = 0):
     row = []
     row_sum = 0
     for elem in range(list_len):
-        value = abs(random.gauss(mean,std)) #todo make sure to avoid negatives
+        value = abs(random.gauss(mean,std)) # using "abs" make sure to avoid negatives
         row.append(value)
         row_sum += value
     for elem in range(len(row)):
@@ -30,15 +35,17 @@ class HMM_model:
         N = N_SPECIES
         M = N_EMISSIONS
         """
-        self.pi = row_stoch(N_SPECIES)
-        self.A = [row_stoch(N_SPECIES) for specie in range(N_SPECIES)]
-        self.B = [row_stoch(N_EMISSIONS) for specie in range(N_SPECIES)]
+        # lambda = (A,B,pi)
+        self.pi = row_stoch(N_SPECIES) # initial probability for every species
+        self.A = [row_stoch(N_SPECIES) for specie in range(N_SPECIES)] # every column is the current fish we believe; row is probability of changing our guess to another fish species (depending on the column)
+        self.B = [row_stoch(N_EMISSIONS) for specie in range(N_SPECIES)] # given an observation (emission) whats the probability of it being that specie
 
     def updateModel(self,emissionSeq):
         """
         Update the model using Baum-Welch using previous model and emission sequence.
+        Update is performed when we guess wrong species.
         """
-        self.A, self.B, self.pi = BaumWelch_Algo(self.A, self.B, self.pi, emissionSeq,50)
+        self.A, self.B, self.pi = BaumWelch_Algo(self.A, self.B, self.pi, emissionSeq,50) # 50 iterations of Baum-Welch
 
 
 class PlayerControllerHMM(PlayerControllerHMMAbstract):
@@ -49,7 +56,7 @@ class PlayerControllerHMM(PlayerControllerHMMAbstract):
         """
         self.fishModels = [HMM_model() for specie in range(N_SPECIES)]  #Initialise a model for each type of fish
         self.fishObs = [(fish_id,[]) for fish_id in range(N_FISH)]  #Create a tuple for each individual fish which has a list that will have all observations
-        self.curr_fish_id = -1
+        self.curr_fish_id = -1 # to start with fish id 0 when guessing
 
     def guess(self, step, observations):
         """
@@ -61,7 +68,7 @@ class PlayerControllerHMM(PlayerControllerHMMAbstract):
         :return: None or a tuple (fish_id, fish_type)
         """
 
-        # This code would make a random guess on each step:
+        # This code would make a random guess on each step: 
         # return (step % N_FISH, random.randint(0, N_SPECIES - 1))
 
         
@@ -81,29 +88,25 @@ class PlayerControllerHMM(PlayerControllerHMMAbstract):
         
         self.curr_fish_id += 1
         guessFishObs = self.fishObs[self.curr_fish_id][1]   #Extract observations for the individual fish we will guess
+        
+        # intialise best guess
         bestModelProb = 0
         bestFishType = 0
-        for fishType in range(N_SPECIES): #For each fish specie
+        for fishType in range(N_SPECIES): #For each fish specie, one model per species
             """Get the fish and it's observation
             For each specie, calculate which model has the highest probability for this particular fish with its observations
             """
             fishTypeModel = self.fishModels[fishType]
-            # try:
-            #     if guessFishObs[0] == 0:
-            #         print("Zero exist")
-            #     alpha0 = VectorMultiplication(fishTypeModel.pi,fishTypeModel.B[guessFishObs[0]])    #Dot-product using initial probability (pi) with emission probability for fishType (B[fishType]) at t=0
-            # except:
-            #     print("guess fish obs:", guessFishObs[0])
-            #     print("this thing:", fishTypeModel.B[guessFishObs[0]])
-            #     print("B len:", len(fishTypeModel.B))
-            # fishTypeProb = ForwardAlgorithm(alpha0,fishTypeModel.B,guessFishObs,fishTypeModel.A,len(fishTypeModel.A[0]),len(fishTypeModel.A))
-            fishTypeProb, _ = alphaPass(fishTypeModel.A,fishTypeModel.B, fishTypeModel.pi,guessFishObs, scaling=False)
-            fishTypeProb = sum(fishTypeProb[-1])
+
+            fishTypeProb = ForwardAlgorithm(fishTypeModel.pi,fishTypeModel.B,guessFishObs,fishTypeModel.A,len(fishTypeModel.A[0]),len(fishTypeModel.A),returnSum=False)
+
+            fishTypeProb = fishTypeProb[-1] # only interested in probability last observation
+            
             if fishTypeProb > bestModelProb:    #Saving which guess gave best probability
                 bestModelProb = fishTypeProb
                 bestFishType = fishType
 
-        return (self.curr_fish_id, bestFishType)
+        return (self.curr_fish_id, bestFishType) # returning guess of fish_id and fish_type
         
 
     def reveal(self, correct, fish_id, true_type):

@@ -60,24 +60,15 @@ def matrix_multiplication(matA, matB):
 
 def VectorMultiplication(vectorA: list, vectorB: list):
     """
-    multiplies two vectors
+    Multiplies two vectors, elemetwise multiplication
     """
-        
-    # if len(vectorA) != len(vectorB):
-    #     # if one is scalar and other is vector, multiply each element of vector by scalar
-    #     if len(vectorA) == 1:
-    #         return [vectorA[0] * b for b in vectorB]
-    #     elif len(vectorB) == 1:
-    #         return [a * vectorB[0] for a in vectorA]
-        # else:
-        #     raise Exception("Vectors must be of same length")
 
     return [a * b for a, b in zip(vectorA, vectorB)]
 
 
 def GetCollumn(matrix: list, col: int):
     """
-    returns a collumn from a matrix 
+    Returns a collumn from a matrix 
     """
     column = [row[col] for row in matrix]
     return column
@@ -89,10 +80,13 @@ def ForwardAlgorithm(alpha:float, emissionMatrix:list, observationsequence:list,
     Given an observation sequence, calculate the probability of the observation sequence
     for 2<=t<=T, i.e. initial alpha is given
     """
+
+    # alpha is a list of probabilities for each state | return when no more observations
     if len(observationsequence) == 0:
+        # return sum over all alpha = probability of observation sequence
         if returnSum:
             return sum(alpha) 
-        else:
+        else: 
             return alpha
     
     # alphaNew is sum from 1 to N of alpha(i,t-1) * a(i,j) * b(j,ot)
@@ -100,7 +94,6 @@ def ForwardAlgorithm(alpha:float, emissionMatrix:list, observationsequence:list,
 
     alphaNew = VectorMultiplication( alphaNewTemp, GetCollumn(emissionMatrix, observationsequence[0]) )
     
-    # alphaNew = ForwardAlgorithm(alphaNew, emissionMatrix, observationsequence[1:], transitionmatrix, emissionmatrix, j, N)
 
     return ForwardAlgorithm(alphaNew, emissionMatrix, observationsequence[1:], transitionmatrix, j, N, returnSum)
 
@@ -110,34 +103,44 @@ def ForwardAlgorithm(alpha:float, emissionMatrix:list, observationsequence:list,
 
 
 def ViterbiAlgorithm(delta0:list, emissionMatrix:list, emissionSequence:list, transitionmatrix:list, j:int, M:int, stateSequence:list = [], sumOfProbabilities:list = []):
+    """
+    Given an observation sequence, calculate the most probable sequence of states
+    :param delta0: initial state probability distribution
+    :param emissionMatrix: emission matrix B
+    :param emissionSequence: observation sequence O
+    :param transitionmatrix: transition matrix A
+    :param j: number of states
+    :param M: number of possible emissions
+    :param stateSequence: list for state sequence
+    :return: most probable sequence of states
+    """
+    
     # M number of differnet emissions
     # j number of states
 
 
-    
 
-    # T1 is probability of most probable path so far
-    T1 = [[0 for emission in range(len(emissionSequence))] for state in range(len(emissionMatrix[0]))] # matrix of size j x len(emissionSequence)
+    # bestPathProb is probability of most probable path so far
+    bestPathProb = [[0 for emission in range(len(emissionSequence))] for state in range(len(emissionMatrix[0]))] # matrix of size j x len(emissionSequence)
     
     # most likely path so far
-    T2 = [[0 for emission in range(len(emissionSequence))] for state in range(len(emissionMatrix[0]))] # matrix of size j x len(emissionSequence)
+    bestPathProbIndx = [[0 for emission in range(len(emissionSequence))] for state in range(len(emissionMatrix[0]))] # matrix of size j x len(emissionSequence)
 
-    # stateProb = [[0 for emission in range(len(emissionSequence))] for state in range(j)]
 
-    # save delta0 to T1
+    # save delta0 to bestPathProb
     for stateI in range(j):
-        T1[stateI][0] = delta0[stateI]
-        T2[stateI][0] = 0
+        bestPathProb[stateI][0] = delta0[stateI]
+        bestPathProbIndx[stateI][0] = 0
 
 
     for observationJ in range(1, len(emissionSequence)):
         for stateI in range(j):
             
-            temp = [ T1[stateK][observationJ-1] * transitionmatrix[stateK][stateI] * emissionMatrix[stateI][emissionSequence[observationJ]] for stateK in range(j) ]
+            probTransitionList = [ bestPathProb[stateK][observationJ-1] * transitionmatrix[stateK][stateI] * emissionMatrix[stateI][emissionSequence[observationJ]] for stateK in range(j) ] # TODO: comment function/purpose
 
-            T1[stateI][observationJ] =  max( temp ) 
+            bestPathProb[stateI][observationJ] =  max( probTransitionList ) 
 
-            T2[stateI][observationJ] = temp.index( T1[stateI][observationJ ])
+            bestPathProbIndx[stateI][observationJ] = probTransitionList.index( bestPathProb[stateI][observationJ ])
 
     # find most probable state to transition to the last state
     
@@ -145,12 +148,12 @@ def ViterbiAlgorithm(delta0:list, emissionMatrix:list, emissionSequence:list, tr
     
     # find most probable last state
     for stateI in range(j):
-        stateSequence[-1] = stateI if T1[stateI][-1] > T1[stateSequence[-1]][-1] else stateSequence[-1]
+        stateSequence[-1] = stateI if bestPathProb[stateI][-1] > bestPathProb[stateSequence[-1]][-1] else stateSequence[-1]
 
 
     # traverse backwards
     for observationJ in range(len(emissionSequence)-2, -1, -1): # start: len(emissionSequence)-2, stop: 0, step: backwards
-        stateSequence[observationJ] = T2[stateSequence[observationJ+1]][observationJ+1]
+        stateSequence[observationJ] = bestPathProbIndx[stateSequence[observationJ+1]][observationJ+1]
     
 
     print(  " ".join(map(str, stateSequence))   )
@@ -210,32 +213,8 @@ def main():
 
 
     
-    
 
 
-"""
-
-4 4 0.0 0.8 0.1 0.1 0.1 0.0 0.8 0.1 0.1 0.1 0.0 0.8 0.8 0.1 0.1 0.0 
-4 4 0.9 0.1 0.0 0.0 0.0 0.9 0.1 0.0 0.0 0.0 0.9 0.1 0.1 0.0 0.0 0.9 
-1 4 1.0 0.0 0.0 0.0 
-4 1 1 2 2 
-
-
-
-
-5 5 0.0 0.8 0.1 0.1 0.1 0.0 0.8 0.1 0.1 0.1 0.0 0.8 0.8 0.1 0.1 0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9
-5 5 0.9 0.1 0.0 0.0 0.0 0.9 0.1 0.0 0.0 0.0 0.9 0.1 0.1 0.0 0.0 0.9 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 
-1 5 1.0 0.0 0.0 0.0 1.0
-5 1 1 2 2 1
-
-
-out: 0 1 2 1 
-
-"""
-
-    
-    
-    
 
 
 

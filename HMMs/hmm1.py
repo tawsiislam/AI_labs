@@ -2,6 +2,8 @@
 
 # You will be given three matrices (in this order); transition matrix, emission matrix, and initial state probability distribution. The initial state probability distribution is a row vector encoded as a matrix with only one row. Each matrix is given on a separate line with the number of rows and columns followed by the matrix elements (ordered row by row). Note that the rows and column size can be different from the sample input.
 
+# output: calculate the probability for this sequence.
+
 
 
 
@@ -88,35 +90,30 @@ def GetCollumn(matrix: list, col: int):
 
 
 
-def ForwardAlgorithm(alpha:float, emissionMatrix:list, observationsequence:list, transitionmatrix:list, j:int, N:int):
+def ForwardAlgorithm(alpha:float, emissionMatrix:list, observationsequence:list, transitionmatrix:list, j:int, N:int, returnSum:bool = True):
     """
     a.k.a. alpha-pass.
     Given an observation sequence, calculate the probability of the observation sequence
     for 2<=t<=T, i.e. initial alpha is given
     """
+
+    # alpha is a list of probabilities for each state | return when no more observations
     if len(observationsequence) == 0:
-        return sum(alpha) 
+        # return sum over all alpha = probability of observation sequence
+        if returnSum:
+            return sum(alpha) 
+        else: 
+            return alpha
     
     # alphaNew is sum from 1 to N of alpha(i,t-1) * a(i,j) * b(j,ot)
     alphaNewTemp = [ sum(  VectorMultiplication( alpha , GetCollumn(transitionmatrix, i) )  ) for i in range(j) ]
 
     alphaNew = VectorMultiplication( alphaNewTemp, GetCollumn(emissionMatrix, observationsequence[0]) )
     
-    # alphaNew = ForwardAlgorithm(alphaNew, emissionMatrix, observationsequence[1:], transitionmatrix, emissionmatrix, j, N)
 
-    return ForwardAlgorithm(alphaNew, emissionMatrix, observationsequence[1:], transitionmatrix, j, N)
-
+    return ForwardAlgorithm(alphaNew, emissionMatrix, observationsequence[1:], transitionmatrix, j, N, returnSum)
 
 
-    
-"""
-4 4 0.0 0.8 0.1 0.1 0.1 0.0 0.8 0.1 0.1 0.1 0.0 0.8 0.8 0.1 0.1 0.0 
-4 4 0.9 0.1 0.0 0.0 0.0 0.9 0.1 0.0 0.0 0.0 0.9 0.1 0.1 0.0 0.0 0.9 
-1 4 1.0 0.0 0.0 0.0 
-8 0 1 2 3 0 1 2 3 
-
-
-"""
 
 
 def main():
@@ -141,9 +138,6 @@ def main():
 
     #---------------------------------------------------------------------------
 
-
-    
-    
     # calculate probability of emission sequence using forward algorithm
     # initial alpha,      pi[0] gives initial state probability distribution as a vector (list)
     aplpha1 = VectorMultiplication(pi[0], GetCollumn(B, emissionSequence[1] ) )
@@ -158,14 +152,12 @@ def main():
 
     # emissionSequence[2:] because first element tells size, second element is first emission, etc
 
-    # if len(emissionSequence) > 2:
-    #     pObservationsGivenLambda = ForwardAlgorithm(aplpha1, B, emissionSequence[2:], A, B, j, M)
-    # else: pObservationsGivenLambda = sum(aplpha1)
+   
     pObservationsGivenLambda = ForwardAlgorithm(aplpha1, B, emissionSequence[2:], A, j, M)
     
-    # print(round(pObservationsGivenLambda, 6))
+    
     print(pObservationsGivenLambda)
-    # print("is same as answer: ", 0.090276 ==round(pObservationsGivenLambda, 6))
+    
 
 
 

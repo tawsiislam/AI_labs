@@ -137,7 +137,6 @@ def logProbFunc(c: list, lenO: int):
     return -logProb
 
 def BaumWelch_Algo(A: list, B: list, pi: list, O: list, max_iter: int=10):
-    iter = 0
     prevLogProb = float('-inf')
 
     for iter in range(max_iter):
