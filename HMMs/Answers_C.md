@@ -39,10 +39,20 @@ You cannot find the correct parameters from the start without doing some trial-a
 
 # Q10
 ## Uniform distribution
-Starting with a uniform distribution gives the same matrix. This because this result of a model is a local minimum where all the state are transitioning with equal probailities. Distinguishing  the different states from each other using the data becomes difficult and there are no improvement on the model. 
+Final model
+3 3 0.333334 0.333333 0.333334 0.333335 0.333334 0.333332 0.333334 0.333333 0.333334\
+3 4 0.2642 0.2699 0.2085 0.2574 0.2642 0.2699 0.2085 0.2574 0.2642 0.2699 0.2085 0.2574\
+Starting with a uniform distribution gives the same matrix for A but with some difference for B. This because this result of a model is a local minimum where all the state are transitioning with equal probailities. Distinguishing  the different states from each other using the data becomes difficult and there are no improvement on the model. 
 
 ## Diagonal matrix
+3 3 1.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0\
+3 4 0.2642 0.2699 0.2085 0.2574 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0\
 Because we are working with a lot of zeros, the result we saw is that you have a lot of NaN values. This is due to there occuring division by zero, which is undefined. This undefined value is then multiplied with all the other elements and occur in the gamma that causes problem when trying to reestimate the matrices.
 
 ## Close to solution
-When having close to the solution we are getting the same results as before that is different from the actual model. You could say the error is caused by the noise in the observation that causes the estimation of the model to not be perfect or there are inaccuracies during the calculations. The error becomes smaller the more data we have as Baum-Welch is statistical model. If the behaviour of the noise is known then you could add that to be part of the model for better estimations. However, in practice, it's difficult to model the noise.
+Starting with 
+3 3 0.699 0.041 0.26 0.099 0.791 0.11 0.199 0.291 0.51
+3 4 0.699 0.201 0.099 0.001 0.099 0.391 0.305 0.205 0.001 0.099 0.199 0.701
+1 3 0.999 0.0005 0.0005
+
+When having close to the solution we are getting same results when working with 10000 observations. You could say the error is caused by the noise in the observation that causes the estimation of the model to not be perfect or there are inaccuracies during the calculations. The error becomes smaller the more data we have as Baum-Welch is statistical model. If the behaviour of the noise is known then you could add that to be part of the model for better estimations. However, in practice, it's difficult to model the noise.
