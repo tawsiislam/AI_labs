@@ -29,7 +29,7 @@ def outputMatrix(matrix):
     matrix_list.append(len(matrix[0]))
     for row in matrix:
         for elem in row:
-           matrix_list.append(round(elem,6))
+            matrix_list.append(round(elem,6))
     print(' '.join(map(str,matrix_list)))
 
 def alphaPass(A: list, B: list, pi: list, O: list, scaling=True):   #Scaling suitable for Baum-Welch algorithm
@@ -138,17 +138,22 @@ def logProbFunc(c: list, lenO: int):
 
 def BaumWelch_Algo(A: list, B: list, pi: list, O: list, max_iter: int=10):
     prevLogProb = float('-inf')
-
-    for iter in range(max_iter):
+    iter = 0
+    while(True):
         alpha,c = alphaPass(A, B, pi, O)
         beta = betaPass(A, B, O, c)
         gamma, digamma = gammaFunc(A, B, O, alpha, beta)
         A, B, pi = reestimate(A, B, pi, O, gamma, digamma)
         newLogProb = logProbFunc(c,len(O))
+        iter += 1
         if  newLogProb > prevLogProb:
             prevLogProb = newLogProb
         else:
             break
+        if iter%200 == 0:
+            print("iter now:",iter)
+
+    print("Iter finished at:",iter)
     
     return A, B, pi
 
