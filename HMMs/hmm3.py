@@ -41,7 +41,7 @@ def alphaPass(A: list, B: list, pi: list, O: list, scaling=True):   #Scaling sui
     for state in totStateIterable:
         alpha[0][state] = pi[state]*B[state][O[0]]
         c[0] += alpha[0][state]
-    c[0] = 1/(c[0]+sys.float_info.epsilon)
+    c[0] = 1/(c[0]+sys.float_info.epsilon*0)
     if scaling == False:
         for state in totStateIterable:
             alpha[0][state] *= c[0]  #Normalising alpha[state][0]/c[0]
@@ -52,7 +52,7 @@ def alphaPass(A: list, B: list, pi: list, O: list, scaling=True):   #Scaling sui
                 alpha[obs_t][state_i] = alpha[obs_t][state_i] + alpha[obs_t-1][state_j]*A[state_j][state_i]
             alpha[obs_t][state_i] *= B[state_i][O[obs_t]]
             c[obs_t] += alpha[obs_t][state_i]
-        c[obs_t] = 1/(c[obs_t]+sys.float_info.epsilon)
+        c[obs_t] = 1/(c[obs_t]+sys.float_info.epsilon*0)
         if scaling == True:
             for state_i in totStateIterable:
                 alpha[obs_t][state_i] *= c[obs_t]
@@ -114,7 +114,7 @@ def reestimate(A: list, B: list, pi: list, O: list, gamma: list, digamma: list):
             numer = 0
             for obs_t in totObsIterable[:-1]:
                 numer += digamma[obs_t][state_i][state_j]
-            new_A[state_i][state_j] = numer/(denom+sys.float_info.epsilon)
+            new_A[state_i][state_j] = numer/(denom+sys.float_info.epsilon*0)
     
     for state_i in totStateIterable:    # Re-estimate B
         denom = 0
@@ -125,7 +125,7 @@ def reestimate(A: list, B: list, pi: list, O: list, gamma: list, digamma: list):
             for obs_t in totObsIterable:
                 if (O[obs_t]==state_j):
                     numer += gamma[obs_t][state_i]
-            new_B[state_i][state_j] = numer/(denom+sys.float_info.epsilon)
+            new_B[state_i][state_j] = numer/(denom+sys.float_info.epsilon*0)
     return new_A, new_B, new_pi
 
 def logProbFunc(c: list, lenO: int):
@@ -145,11 +145,15 @@ def BaumWelch_Algo(A: list, B: list, pi: list, O: list, max_iter: int=10):
         gamma, digamma = gammaFunc(A, B, O, alpha, beta)
         A, B, pi = reestimate(A, B, pi, O, gamma, digamma)
         newLogProb = logProbFunc(c,len(O))
-        if  newLogProb > prevLogProb:
+        if  newLogProb > prevLogProb or abs(newLogProb - prevLogProb) < 0.0001*prevLogProb: #TODO: this was added for Cpart               or abs(newLogProb - prevLogProb) < 0.0001*prevLogProb
             prevLogProb = newLogProb
         else:
             break
+
+        if(iter%200 ==0): print("iter ", iter)
     
+    print("iter ", iter)
+
     return A, B, pi
 
 def main():
@@ -175,5 +179,79 @@ def main():
 
 
 
+
+
+
+
+
+# C part 
+
+# Q7
+def testQ7():
+    Aexpected = "3 3 0.7 0.05 0.25 0.1 0.8 0.1 0.2 0.3 0.5"
+    Bexpected = "3 4 0.7 0.2 0.1 0.0 0.1 0.4 0.3 0.2 0.0 0.1 0.2 0.7"
+    piexpected = "1 3 1 0 0"
+
+    Aexpected = [float(x) for x in Aexpected.split()] # transition matrix
+    Bexpected = [float(x) for x in Bexpected.split()] # emission matrix
+    piexpected = [float(x) for x in piexpected.split()] # initial state probability distribution
+
+
+    A_init = "3 3 0.54 0.26 0.20 0.19 0.53 0.28 0.22 0.18 0.6"
+    B_init = "3 4 0.5 0.2 0.11 0.19 0.22 0.28 0.23 0.27 0.19 0.21 0.15 0.45"
+    pi_init = "1 3 0.3 0.2 0.5"
+
+    A_init = [float(x) for x in A_init.split()] # transition matrix
+    B_init = [float(x) for x in B_init.split()] # emission matrix
+    pi_init = [float(x) for x in pi_init.split()] # initial state probability distribution
+
+    
+    # convert to matrices
+    Aexpected = ParseMatrix(Aexpected)
+    Bexpected = ParseMatrix(Bexpected)
+    piexpected = ParseMatrix(piexpected)
+
+    A = ParseMatrix(A_init)
+    B = ParseMatrix(B_init)
+    pi = ParseMatrix(pi_init)
+
+    # load data structute hmm_c_N1000.in
+    emissionSequence = []
+    with open("hmm_c_N10000.in") as f: # n = 1000 converges in 3930 iterations
+        for line in f:
+            emissionSequence.append((line))
+    newEmmisionSequence = []
+    # split all lines into a list of integers
+    for line in emissionSequence:
+        newEmmisionSequence.append([int(x) for x in line.split()])
+    # print("emissionSeq ", newEmmisionSequence[0][1:])
+
+    # calling on baum welch algorithm
+    A, B, pi = BaumWelch_Algo(A, B, pi[0], newEmmisionSequence[0][1:], 10000)
+    outputMatrix(A)
+    outputMatrix(B)
+
+
+
+
+
+
+
+
+
+
+
+
 if __name__ == "__main__":
-    main()
+    # main()
+    testQ7()
+
+
+
+
+
+
+
+
+
+
