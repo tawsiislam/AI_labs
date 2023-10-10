@@ -17,8 +17,8 @@ alpha: 0.1
 ## Q learning discount rate
 gamma: 0.1
 
-# Disables the graphical engine of the simulator (true by default)
-headless: true
+# Disables the graphical engine of the simulator (true by default)     #TODO: this was set to false
+headless:  true #true false
 
 ## Epsilon initial
 epsilon_initial: 1
