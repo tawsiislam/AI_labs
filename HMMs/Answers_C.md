@@ -45,9 +45,7 @@ Final model
 Starting with a uniform distribution gives the same matrix for A but with some difference for B. This because this result of a model is a local minimum where all the state are transitioning with equal probailities. Distinguishing  the different states from each other using the data becomes difficult and there are no improvement on the model. 
 
 ## Diagonal matrix
-3 3 1.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0\
-3 4 0.2642 0.2699 0.2085 0.2574 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0\
-Because we are working with a lot of zeros, the result we saw is that you have a lot of NaN values. This is due to there occuring division by zero, which is undefined. This undefined value is then multiplied with all the other elements and occur in the gamma that causes problem when trying to reestimate the matrices.
+Because we are working with a lot of zeros, the result we saw is that you have a lot of NaN values. This is due to there occuring division by zero, which is undefined which is coming from beta matrix having columns that are zero. Possible reason is that there are states that are not reachable giving columns of zeros in beta. The result is then multiplied with all the other elements and occur in the gamma that causes problem when trying to reestimate the matrices.
 
 ## Close to solution
 Starting with 
