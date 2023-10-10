@@ -3,13 +3,13 @@
 rewards = [-10, -10, -10, -10, -10, -10, -10, -10, -10, -10, -10, -10, -10]
 
 # Q learning learning rate
-alpha = 0
+alpha = 0.8
 
 # Q learning discount rate
-gamma = 0
+gamma = 0.8
 
 # Epsilon initial
-epsilon_initial = 1
+epsilon_initial = 0.3
 
 # Epsilon final
 epsilon_final = 1
