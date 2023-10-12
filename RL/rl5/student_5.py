@@ -6,13 +6,13 @@ alpha = 0.2
 gamma = 0.5
 
 # Epsilon initial
-epsilon_initial = 0.3
+epsilon_initial = 0.2
 
 # Epsilon final
 epsilon_final = 1
 
 # Annealing timesteps
-annealing_timesteps = 1000
+annealing_timesteps = 10000
 
 # threshold
 threshold = 1e-6

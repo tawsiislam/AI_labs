@@ -93,7 +93,7 @@ def epsilon_greedy(Q,
                    epsilon_initial=1,
                    epsilon_final=0.2,
                    anneal_timesteps=10000,
-                   eps_type="constant"):
+                   eps_type="linear"):
 
     if eps_type == 'constant':
         epsilon = epsilon_final

@@ -155,10 +155,16 @@ class PlayerControllerRL(PlayerController, FishesModelling):
         lr = self.alpha
         # initialization
         self.allowed_movements()
+
         # ADD YOUR CODE SNIPPET BETWEEN EX. 2.1
         # Initialize a numpy array with ns state rows and na state columns with float values from 0.0 to 1.0.
-        Q = None
+        
+        #TODO: Question: how should you initialize Q?
+        # Q = np.random.random((ns, na)) # random float values from [0.0, 1.0) 
+        Q = np.zeros((ns, na)) # zeros
+
         # ADD YOUR CODE SNIPPET BETWEEN EX. 2.1
+
 
         for s in range(ns):
             list_pos = self.allowed_moves[s]
@@ -178,11 +184,12 @@ class PlayerControllerRL(PlayerController, FishesModelling):
         R_total = 0
         current_total_steps = 0
         steps = 0
+        diff = np.Infinity
 
         # ADD YOUR CODE SNIPPET BETWEEN EX. 2.3
         # Change the while loop to incorporate a threshold limit, to stop training when the mean difference
         # in the Q table is lower than the threshold
-        while episode <= self.episode_max:
+        while episode <= self.episode_max and diff > self.threshold: 
             # ADD YOUR CODE SNIPPET BETWEENEX. 2.3
 
             s_current = init_pos
@@ -192,11 +199,21 @@ class PlayerControllerRL(PlayerController, FishesModelling):
                 # selection of action
                 list_pos = self.allowed_moves[s_current]
 
+                
+                
+                
                 # ADD YOUR CODE SNIPPET BETWEEN EX 2.1 and 2.2
                 # Chose an action from all possible actions
-                action = None
+                
+                # 2.1: choose action with best policy, ignoring NaN values
+                action = np.nanargmax(Q[s_current])   
                 # ADD YOUR CODE SNIPPET BETWEEN EX 2.1 and 2.2
 
+                
+                
+                
+                
+                
                 # ADD YOUR CODE SNIPPET BETWEEN EX 5
                 # Use the epsilon greedy algorithm to retrieve an action
                 # ADD YOUR CODE SNIPPET BETWEEN EX 5
@@ -214,18 +231,43 @@ class PlayerControllerRL(PlayerController, FishesModelling):
                 end_episode = msg["end_episode"]
                 s_next = self.ind2state[s_next_tuple]
 
+
+
+
+
                 # ADD YOUR CODE SNIPPET BETWEEN EX. 2.2
                 # Implement the Bellman Update equation to update Q
+
+                # we find U(s) by taking the max of Q(s, a) for all a
+                U = np.nanmax( Q[s_next] )
+
+                # update Q(s, a) using the Bellman Update equation:
+                # Q(s, a) = Q(s, a) + alpha * (R + gamma * U(s) - Q(s, a))
+                Q[s_current, action] += self.alpha*( R + self.gamma*U - Q[s_current, action] )
+                
                 # ADD YOUR CODE SNIPPET BETWEEN EX. 2.2
+
+
+
+
 
                 s_current = s_next
                 current_total_steps += 1
                 steps += 1
 
+            
+            
+            
+            
             # ADD YOUR CODE SNIPPET BETWEEN EX. 2.3
             # Compute the absolute value of the mean between the Q and Q-old
-            diff = 100
+            diff = np.abs(np.nanmean(Q-Q_old)) 
+            # diff = np.nanmean(np.abs(Q-Q_old)) # #100
+
             # ADD YOUR CODE SNIPPET BETWEEN EX. 2.3
+
+
+
             Q_old[:] = Q
             print(
                 "Episode: {}, Steps {}, Diff: {:6e}, Total Reward: {}, Total Steps {}"
@@ -282,6 +324,7 @@ class PlayerControllerRandom(PlayerController):
         end_episode = False
         # ADD YOUR CODE SNIPPET BETWEEN EX. 1.2
         # Initialize a numpy array with ns state rows and na state columns with zeros
+        n = np.zeros( (ns, na) )
         # ADD YOUR CODE SNIPPET BETWEEN EX. 1.2
 
         while episode <= self.episode_max:
@@ -294,7 +337,8 @@ class PlayerControllerRandom(PlayerController):
 
                 # ADD YOUR CODE SNIPPET BETWEEN EX. 1.2
                 # Chose an action from all possible actions and add to the counter of actions per state
-                action = None
+                action = np.random.choice(possible_actions)
+                n[s_current, action] += 1
                 # ADD YOUR CODE SNIPPET BETWEEN EX. 1.2
 
                 action_str = self.action_list[action]

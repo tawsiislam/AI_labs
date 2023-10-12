@@ -9,7 +9,7 @@ alpha = 0.8
 gamma = 0.8
 
 # Epsilon initial
-epsilon_initial = 0.3
+epsilon_initial = 1
 
 # Epsilon final
 epsilon_final = 1
